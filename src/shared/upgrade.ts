@@ -235,6 +235,18 @@ export function getCurrentExecutablePath(): string {
 }
 
 /**
+ * Check if an error is a cross-device link error (EXDEV).
+ * This happens when trying to rename across filesystem boundaries.
+ */
+function isCrossDeviceError(error: unknown): boolean {
+  if (error instanceof Error) {
+    return error.message.includes("cross-device") ||
+      error.message.includes("os error 18");
+  }
+  return false;
+}
+
+/**
  * Replace the current executable with a new one.
  * Creates a backup at {path}.backup
  */
@@ -252,7 +264,7 @@ export async function replaceExecutable(
     await Deno.rename(currentPath, backupPath);
   } catch (error) {
     // If rename fails (e.g., cross-device), try copy
-    if (error instanceof Deno.errors.NotSupported) {
+    if (isCrossDeviceError(error)) {
       await Deno.copyFile(currentPath, backupPath);
       await Deno.remove(currentPath);
     } else {
@@ -264,13 +276,22 @@ export async function replaceExecutable(
   try {
     await Deno.rename(newBinaryPath, currentPath);
   } catch (error) {
-    // If rename fails, try copy
-    if (error instanceof Deno.errors.NotSupported) {
+    // If rename fails (cross-device), try copy
+    if (isCrossDeviceError(error)) {
       await Deno.copyFile(newBinaryPath, currentPath);
       await Deno.remove(newBinaryPath);
     } else {
       // Restore backup on failure
-      await Deno.rename(backupPath, currentPath);
+      try {
+        await Deno.rename(backupPath, currentPath);
+      } catch (restoreError) {
+        if (isCrossDeviceError(restoreError)) {
+          await Deno.copyFile(backupPath, currentPath);
+          await Deno.remove(backupPath);
+        } else {
+          throw restoreError;
+        }
+      }
       throw error;
     }
   }
