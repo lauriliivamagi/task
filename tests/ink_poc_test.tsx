@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Text, useInput } from "ink";
 import { render } from "ink-testing-library";
 import { assertEquals } from "@std/assert";
+import { waitForText } from "../src/tui/test-utils.ts";
 
 const Counter = () => {
   const [count, setCount] = useState(0);
@@ -33,8 +34,8 @@ Deno.test({
     assertEquals(lastFrame(), "Count: 0");
 
     stdin.write("+");
-    // Allow a small delay for the event loop to process the input and re-render
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    // Use robust waitForText instead of fixed delay
+    await waitForText(lastFrame, "Count: 1");
 
     assertEquals(lastFrame(), "Count: 1");
     unmount();
