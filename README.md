@@ -3,6 +3,8 @@
 **The AI-first task manager.** Semantic search, agent-friendly APIs, and a TUI
 that stays out of your way.
 
+![Task TUI](docs/images/tui.png)
+
 ## The Problem
 
 Task managers weren't built for AI. You can't pipe tasks to Claude, search by

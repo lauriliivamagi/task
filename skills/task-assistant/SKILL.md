@@ -15,7 +15,7 @@ during coding sessions.
 
 ```bash
 # Create a task
-task add "Implement authentication" --project Backend --due-natural "next friday"
+task add "Implement authentication" --project Backend -d "next friday"
 
 # Create a task with tags
 task add "Fix login bug" --tag bug --tag auth
@@ -42,7 +42,7 @@ task view 1
 task add "Task title" "Optional description"
 
 # With project and due date (supports datetime)
-task add "Review PR" --project Work --due-natural "tomorrow at 14:00"
+task add "Review PR" --project Work -d "tomorrow at 14:00"
 
 # As subtask
 task add "Write tests" --parent 5
