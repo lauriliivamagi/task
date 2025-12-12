@@ -1,4 +1,4 @@
-// TigerStyle assertions for larr-task.
+// TigerStyle assertions for Task.
 // Assertions detect programmer errors. Unlike operating errors (expected),
 // assertion failures are unexpected. The only correct way to handle corrupt
 // code is to crash. Assertions downgrade catastrophic correctness bugs into

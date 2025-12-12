@@ -13,7 +13,7 @@ Download the binary for your platform:
 
 ```bash
 # Linux x86_64
-curl -L https://github.com/larr/larr-task/releases/latest/download/task-linux-x86_64 -o task
+curl -L https://github.com/lauriliivamagi/task/releases/latest/download/task-linux-x86_64 -o task
 chmod +x task
 sudo mv task /usr/local/bin/
 ```
