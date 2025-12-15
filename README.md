@@ -5,6 +5,10 @@ that stays out of your way.
 
 ![Task TUI](docs/images/tui.png)
 
+> **Documentation**: See the comprehensive
+> [Code Wiki](https://codewiki.google/github.com/lauriliivamagi/task) for
+> detailed architecture and API documentation.
+
 ## The Problem
 
 Task managers weren't built for AI. You can't pipe tasks to Claude, search by
