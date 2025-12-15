@@ -1,5 +1,5 @@
 {
   "name": "task-assistant",
   "description": "Intelligent task management via the `task` CLI. Invoke when users ask to: create/list/update/delete tasks, search tasks (text or semantic), track work items with due dates, organize tasks into projects, run batch operations, generate activity reports, or manage recurring tasks. Supports natural language dates and Google Calendar sync.",
-  "version": "1.2.11"
+  "version": "1.2.12"
 }
