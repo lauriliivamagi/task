@@ -70,6 +70,7 @@ export interface ITaskClient {
   }>;
   getGcalStatus(): Promise<{ authenticated: boolean; calendarId?: string }>;
   health(): Promise<{ status: string }>;
+  deleteTask(id: number): Promise<{ deleted: boolean }>;
 }
 
 // === Machine Input ===
@@ -168,6 +169,8 @@ export type TuiEvent =
   | { type: "START_EDIT_TITLE" } // Detail view title editing
   | { type: "START_EDIT_TITLE_IN_LIST" } // List view inline title editing
   | { type: "START_CHANGE_DURATION" } // Duration editing
+  | { type: "START_DELETE_TASK" } // Delete task confirmation
+  | { type: "CONFIRM_DELETE" } // Confirm task deletion
   | { type: "CANCEL" }
   // Form input
   | { type: "UPDATE_TITLE"; value: string }
@@ -328,6 +331,11 @@ export interface UpdateDurationInput {
   durationHours: number | null;
 }
 
+export interface DeleteTaskInput {
+  client: ITaskClient;
+  taskId: number;
+}
+
 // === UI Mode Type (derived from state) ===
 export type UiMode =
   | "loading"
@@ -355,6 +363,8 @@ export type UiMode =
   | "switchingDatabase"
   | "enteringGcalDuration"
   | "syncingToCalendar"
+  | "confirmingDelete"
+  | "deletingTask"
   | "submitting";
 
 // === Focus Type ===

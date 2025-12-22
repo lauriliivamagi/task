@@ -101,7 +101,8 @@ task update 42 --clear-project
 
 ### `task delete <id>`
 
-Delete a task. Use bulk delete for single or multiple tasks:
+Delete a task and its subtasks (cascade delete). Use bulk delete for single or
+multiple tasks:
 
 ```bash
 task bulk delete 42 --yes        # Delete single task

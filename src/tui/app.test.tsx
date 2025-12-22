@@ -1211,7 +1211,7 @@ Deno.test({
 // === Task Deletion Tests ===
 
 Deno.test({
-  name: "TUI E2E - 'D' (Shift+d) prompts for task deletion",
+  name: "TUI E2E - '-' shows delete confirmation and 'n' cancels",
   sanitizeResources: false,
   sanitizeOps: false,
   fn: async () => {
@@ -1219,13 +1219,49 @@ Deno.test({
 
     await waitForText(lastFrame, "Tasks", { timeout: 3000 });
 
-    // Press 'D' to delete task
-    stdin.write("D");
+    // Press '-' to delete task
+    stdin.write("-");
     await delay(100);
 
-    // Should show confirmation - press 'n' to cancel
+    // Should show confirmation dialog
+    await waitForText(lastFrame, "Delete Task", { timeout: 1000 });
+
+    // Press 'n' to cancel
     stdin.write("n");
     await delay(100);
+
+    // Should be back to task list
+    const frame = stripAnsi(lastFrame() ?? "");
+    assertEquals(frame.includes("Delete Task"), false);
+
+    unmount();
+    cleanup();
+  },
+});
+
+Deno.test({
+  name: "TUI E2E - '-' shows delete confirmation and 'y' deletes task",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  fn: async () => {
+    const { lastFrame, stdin, unmount } = renderApp();
+
+    await waitForText(lastFrame, "Tasks", { timeout: 3000 });
+
+    // Press '-' to delete task
+    stdin.write("-");
+    await delay(100);
+
+    // Should show confirmation dialog
+    await waitForText(lastFrame, "Delete Task", { timeout: 1000 });
+
+    // Press 'y' to confirm
+    stdin.write("y");
+    await delay(200);
+
+    // Should be back to task list with task deleted
+    const frame = stripAnsi(lastFrame() ?? "");
+    assertEquals(frame.includes("Delete Task"), false);
 
     unmount();
     cleanup();

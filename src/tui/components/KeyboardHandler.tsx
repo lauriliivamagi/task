@@ -159,6 +159,16 @@ export function KeyboardHandler(): React.ReactElement | null {
         handleDurationInput(key, actorRef, mode, keyStr);
         return;
 
+      case "confirmingDelete":
+        if (input === "y" || input === "Y") {
+          logDispatch("CONFIRM_DELETE", mode, keyStr);
+          actorRef.send({ type: "CONFIRM_DELETE" });
+        } else if (input === "n" || input === "N" || key.escape) {
+          logDispatch("CANCEL", mode, keyStr);
+          actorRef.send({ type: "CANCEL" });
+        }
+        return;
+
       // Dropdown/selection modes - handled by components directly
       case "changingStatus":
       case "changingPriority":

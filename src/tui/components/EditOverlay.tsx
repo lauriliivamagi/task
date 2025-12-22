@@ -13,6 +13,7 @@ import {
   useTuiSelector,
 } from "../machines/index.ts";
 import type { TaskStatus } from "../../shared/schemas.ts";
+import { ConfirmationDialog } from "./ConfirmationDialog.tsx";
 import { Dropdown, type DropdownOption } from "./Dropdown.tsx";
 import { FileBrowser } from "./FileBrowser.tsx";
 import { MultilineInput } from "./MultilineInput.tsx";
@@ -433,6 +434,19 @@ export function EditOverlay(): React.ReactElement | null {
         </Text>
         <Text backgroundColor={BG_COLOR}>{padLine("")}</Text>
       </Box>
+    );
+  }
+
+  // Delete confirmation
+  if (mode === "confirmingDelete") {
+    const taskTitle = task?.title ?? "this task";
+    return (
+      <ConfirmationDialog
+        title="Delete Task"
+        message={`Delete "${taskTitle}"?`}
+        onConfirm={() => actorRef.send({ type: "CONFIRM_DELETE" })}
+        onCancel={() => actorRef.send({ type: "CANCEL" })}
+      />
     );
   }
 

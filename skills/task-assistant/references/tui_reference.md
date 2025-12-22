@@ -36,6 +36,7 @@ details).
 | `Shift+J` | Move task down                |
 | `Shift+K` | Move task up                  |
 | `/`       | Search                        |
+| `-`       | Delete task (with confirm)    |
 | `Shift+R` | Refresh                       |
 | `Enter`   | View task details             |
 | `Tab`     | Switch to detail panel        |

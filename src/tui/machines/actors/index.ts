@@ -15,6 +15,7 @@
 import {
   createWorkspaceActor,
   dataActors,
+  deleteTaskActor,
   gcalSyncActor,
   loadTaskDetailActor,
   loadTasksActor,
@@ -50,6 +51,7 @@ export {
   createTaskActor,
   createWorkspaceActor,
   dataActors,
+  deleteTaskActor,
   editingActors,
   gcalSyncActor,
   loadProjectsActor,
@@ -84,6 +86,7 @@ export const actors = {
   switchDatabase: switchDatabaseActor,
   gcalSync: gcalSyncActor,
   updateDuration: updateDurationActor,
+  deleteTask: deleteTaskActor,
   // Editing actors (used by child machine, but kept here for backward compatibility)
   createTask: createTaskActor,
   addComment: addCommentActor,

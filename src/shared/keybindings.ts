@@ -38,6 +38,7 @@ export const ActionId = z.enum([
   "startSearch",
   "refresh",
   "clearSearch",
+  "deleteTask",
 
   // Detail view actions
   "switchToList",
@@ -82,6 +83,7 @@ export const ACTION_LABELS: Record<ActionId, string> = {
   startSearch: "Search",
   refresh: "Refresh",
   clearSearch: "Clear search",
+  deleteTask: "Delete task",
   switchToList: "List view",
   editTitle: "Edit title",
   editDescription: "Edit description",
@@ -121,6 +123,7 @@ export const ACTION_TO_EVENT: Record<ActionId, string | null> = {
   startSearch: "START_SEARCH",
   refresh: "REFRESH",
   clearSearch: "CLEAR_SEARCH",
+  deleteTask: "START_DELETE_TASK",
   switchToList: "TAB",
   editTitle: "START_EDIT_TITLE",
   editDescription: "START_EDIT_DESCRIPTION",
@@ -189,6 +192,7 @@ const DEFAULT_LIST_BINDINGS: DefaultBinding[] = [
   { key: "K", action: "moveTaskUp" },
   { key: "/", action: "startSearch" },
   { key: "R", action: "refresh" },
+  { key: "-", action: "deleteTask" },
 ];
 
 /**

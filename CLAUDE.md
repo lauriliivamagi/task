@@ -508,6 +508,7 @@ operations (API calls, file ops).
 | `p`       | Toggle in-progress |
 | `y`       | Yank to clipboard  |
 | `w`       | Start work         |
+| `-`       | Delete task        |
 | `Shift+J` | Move task down     |
 | `Shift+K` | Move task up       |
 | `Shift+R` | Refresh            |

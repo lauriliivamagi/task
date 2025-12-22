@@ -83,6 +83,8 @@ export const selectUiMode = (state: TuiSnapshot) => {
   }
   if (state.matches({ ui: "pickingDatabase" })) return "pickingDatabase";
   if (state.matches({ ui: "switchingDatabase" })) return "switchingDatabase";
+  if (state.matches({ ui: "confirmingDelete" })) return "confirmingDelete";
+  if (state.matches({ ui: "deletingTask" })) return "deletingTask";
 
   // Detail editing uses currentEditingMode from context (child machine state)
   if (state.matches({ ui: "detailEditing" })) {

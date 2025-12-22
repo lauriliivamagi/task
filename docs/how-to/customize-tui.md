@@ -47,7 +47,8 @@ Open `~/.task-cli/config.json` and add a `keybindings` section:
 | `moveTaskUp`     | `Shift+K` | Reorder task up       |
 | `moveTaskDown`   | `Shift+J` | Reorder task down     |
 | `refresh`        | `Shift+R` | Refresh tasks         |
-| `search`         | `/`       | Open search           |
+| `startSearch`    | `/`       | Open search           |
+| `deleteTask`     | `-`       | Delete task           |
 | `switchPanel`    | `Tab`     | Switch to detail view |
 
 ## Detail View actions

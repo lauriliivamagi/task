@@ -30,11 +30,18 @@ deleteRoute.delete(
   },
 );
 
-// Delete single task
+// Delete single task (with subtask cascade)
 deleteRoute.delete("/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const db = await getDb();
 
+  // Delete subtasks first (single level - subtasks cannot have subtasks)
+  await db.execute({
+    sql: "DELETE FROM tasks WHERE parent_id = ?",
+    args: [id],
+  });
+
+  // Then delete the task itself
   await db.execute({
     sql: "DELETE FROM tasks WHERE id = ?",
     args: [id],

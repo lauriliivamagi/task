@@ -8,6 +8,7 @@ import { fromPromise } from "xstate";
 import type { TaskFull, TaskWithProject } from "../../../shared/schemas.ts";
 import type {
   CreateWorkspaceInput,
+  DeleteTaskInput,
   GcalSyncInput,
   LoadTaskDetailInput,
   LoadTasksInput,
@@ -270,6 +271,13 @@ export const updateDurationActor = fromPromise<
   },
 );
 
+/** Delete task actor - deletes task and its subtasks */
+export const deleteTaskActor = fromPromise<void, DeleteTaskInput>(
+  async ({ input }) => {
+    await input.client.deleteTask(input.taskId);
+  },
+);
+
 /** Data actors for machine setup */
 export const dataActors = {
   loadTasks: loadTasksActor,
@@ -283,4 +291,5 @@ export const dataActors = {
   switchDatabase: switchDatabaseActor,
   gcalSync: gcalSyncActor,
   updateDuration: updateDurationActor,
+  deleteTask: deleteTaskActor,
 };

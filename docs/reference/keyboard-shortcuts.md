@@ -19,6 +19,7 @@ Complete list of keyboard shortcuts for the TUI.
 | `Shift+K` | Move task up in list            |
 | `Shift+R` | Refresh tasks                   |
 | `/`       | Open search                     |
+| `-`       | Delete task (with confirmation) |
 | `Tab`     | Switch to detail view           |
 | `Enter`   | View task details               |
 

@@ -91,6 +91,8 @@ Body (all fields optional):
 DELETE /tasks/:id
 ```
 
+Deletes the task and all its subtasks (cascade delete).
+
 ### Bulk Update
 
 ```

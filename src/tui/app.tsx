@@ -426,6 +426,8 @@ const OVERLAY_MODES = [
   "changingDuration",
   "addingAttachment",
   "enteringGcalDuration",
+  "confirmingDelete",
+  "deletingTask",
 ];
 
 // === TUI Content (inside context) ===

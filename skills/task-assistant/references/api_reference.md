@@ -129,6 +129,8 @@ When updating status to `done` on a recurring task, the response includes
 DELETE /tasks/:id
 ```
 
+Deletes the task and all its subtasks (cascade delete).
+
 #### Bulk Update
 
 ```

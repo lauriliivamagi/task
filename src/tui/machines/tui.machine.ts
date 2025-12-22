@@ -732,6 +732,10 @@ export const tuiMachine = setup({
                       context.tasks[context.selectedIndex]?.title ?? "",
                   }),
                 },
+                START_DELETE_TASK: {
+                  target: "#tui.ui.confirmingDelete",
+                  guard: "hasSelectedTask",
+                },
               },
             },
             detail: {
@@ -1078,6 +1082,49 @@ export const tuiMachine = setup({
                   event.error instanceof Error
                     ? event.error.message
                     : "Failed to update title",
+              }),
+            },
+          },
+        },
+
+        // === Delete Task Confirmation ===
+        confirmingDelete: {
+          on: {
+            CANCEL: {
+              target: "normal.list",
+            },
+            CONFIRM_DELETE: {
+              target: "deletingTask",
+            },
+          },
+        },
+
+        deletingTask: {
+          invoke: {
+            id: "deleteTask",
+            src: "deleteTask",
+            input: ({ context }) => ({
+              client: context.client,
+              taskId: context.tasks[context.selectedIndex]?.id ?? 0,
+            }),
+            onDone: {
+              target: "normal.list",
+              actions: [
+                assign({
+                  selectedTask: null,
+                  selectedIndex: ({ context }) =>
+                    Math.max(0, context.selectedIndex - 1),
+                }),
+                raise({ type: "REFRESH" }),
+              ],
+            },
+            onError: {
+              target: "normal.list",
+              actions: assign({
+                error: ({ event }) =>
+                  event.error instanceof Error
+                    ? event.error.message
+                    : "Failed to delete task",
               }),
             },
           },
