@@ -380,23 +380,24 @@ Pull changes from remote.
 Create a workspace for a task and start working.
 
 ```bash
-task work 42                      # Create workspace, open IDE
-task work 42 --template python    # Use specific template
-task work 42 --name my-project    # Custom directory name
-task work 42 --no-open            # Create but don't open IDE
-task work 42 --open               # Open existing workspace
-task work --list-templates        # Show available templates
+task work 42                               # Create workspace, open IDE
+task work 42 --template python             # Use built-in template
+task work 42 --template "Knowledge Work"   # Use configured external template
+task work 42 --name my-project             # Custom directory name
+task work 42 --no-open                     # Create but don't open IDE
+task work 42 --open                        # Open existing workspace
+task work --list-templates                 # Show available templates
 ```
 
-| Option                  | Description                              |
-| ----------------------- | ---------------------------------------- |
-| `-t, --template <name>` | Use specific workspace template          |
-| `-n, --name <name>`     | Custom workspace name (default: id-slug) |
-| `--no-open`             | Create workspace but don't open IDE      |
-| `-o, --open`            | Open existing workspace in IDE           |
-| `--list-templates`      | List available workspace templates       |
+| Option                  | Description                                        |
+| ----------------------- | -------------------------------------------------- |
+| `-t, --template <name>` | Use specific template (built-in or configured)     |
+| `-n, --name <name>`     | Custom workspace name (default: id-slug)           |
+| `--no-open`             | Create workspace but don't open IDE                |
+| `-o, --open`            | Open existing workspace in IDE                     |
+| `--list-templates`      | List available templates (built-in and configured) |
 
-**Generated workspace structure:**
+**Default workspace structure (built-in templates):**
 
 ```
 ~/git/42-fix-auth-bug/
@@ -407,6 +408,16 @@ task work --list-templates        # Show available templates
 │   └── .task-ref.json  # Bidirectional link back to task
 └── output/             # Place deliverables here
 ```
+
+**External template workspace structure:**
+
+When using a configured external template, files are copied from the template
+directory. Only `.task-ref.json` is added; no README.md, CLAUDE.md, or
+input/output directories are generated. Template variables like `{{task.id}}`
+are substituted in text files.
+
+See [How to Use Workspace Templates](../how-to/workspace-templates.md) and
+[Configuration Reference](configuration.md#workspace-settings) for setup.
 
 ---
 
