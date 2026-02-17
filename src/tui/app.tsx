@@ -30,6 +30,7 @@ import {
   SearchInput,
   TaskDetail,
   TaskList,
+  TemplatePicker,
   theme,
   ViewTabIndicator,
 } from "./components/index.ts";
@@ -414,6 +415,16 @@ function DatabasePickerView(): React.ReactElement {
   );
 }
 
+// === Template Picker View ===
+
+function TemplatePickerView(): React.ReactElement {
+  return (
+    <Box flexGrow={1} justifyContent="center" alignItems="center">
+      <TemplatePicker />
+    </Box>
+  );
+}
+
 // === Overlay Edit Modes ===
 const OVERLAY_MODES = [
   "changingStatus",
@@ -457,6 +468,9 @@ function TuiContent(): React.ReactElement {
   const isPickingDatabase = mode === "pickingDatabase" ||
     mode === "switchingDatabase";
 
+  // Check if we're picking a template
+  const isPickingTemplate = mode === "pickingTemplate";
+
   // Determine header mode
   const headerMode: HeaderMode = isCommandPaletteOpen
     ? "commandPalette"
@@ -495,6 +509,8 @@ function TuiContent(): React.ReactElement {
           ? <HelpView />
           : isPickingDatabase
           ? <DatabasePickerView />
+          : isPickingTemplate
+          ? <TemplatePickerView />
           : showLoading
           ? <LoadingView />
           : (

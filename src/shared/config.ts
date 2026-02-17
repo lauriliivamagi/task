@@ -13,6 +13,12 @@ import {
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
+export interface WorkspaceTemplate {
+  name: string;
+  path: string;
+  description?: string;
+}
+
 export interface WorkConfig {
   repos_dir: string;
   default_template: string;
@@ -20,6 +26,7 @@ export interface WorkConfig {
   ide_args: string[];
   naming: string;
   auto_commit: boolean;
+  templates?: WorkspaceTemplate[];
 }
 
 export interface SyncConfig {
@@ -124,6 +131,27 @@ async function loadConfigFile(): Promise<Partial<Config>> {
       if (typeof w.naming === "string") config.work.naming = w.naming;
       if (typeof w.auto_commit === "boolean") {
         config.work.auto_commit = w.auto_commit;
+      }
+      if (Array.isArray(w.templates)) {
+        const validTemplates: WorkspaceTemplate[] = [];
+        for (const t of w.templates) {
+          if (
+            t && typeof t === "object" &&
+            typeof t.name === "string" && t.name.length > 0 &&
+            typeof t.path === "string" && t.path.length > 0
+          ) {
+            validTemplates.push({
+              name: t.name,
+              path: t.path,
+              ...(typeof t.description === "string"
+                ? { description: t.description }
+                : {}),
+            });
+          }
+        }
+        if (validTemplates.length > 0) {
+          config.work.templates = validTemplates;
+        }
       }
     }
 

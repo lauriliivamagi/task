@@ -105,6 +105,7 @@ export interface TuiContext {
   titleText: string; // For detail view title editing
   gcalDurationText: string; // For gcal sync duration input
   durationText: string; // For task duration editing
+  selectedTemplateName: string | null; // For workspace template selection
 
   // Task to select after refresh (for newly created tasks)
   pendingSelectTaskId: number | null;
@@ -205,6 +206,9 @@ export type TuiEvent =
   | { type: "CONFIRM_GCAL_SYNC" }
   | { type: "GCAL_SYNC_COMPLETE"; eventUrl?: string }
   | { type: "GCAL_SYNC_ERROR"; error: string }
+  // Template picking
+  | { type: "SELECT_TEMPLATE"; templateName: string | null }
+  | { type: "CANCEL_TEMPLATE_PICKER" }
   // Database switching
   | { type: "SHOW_DB_PICKER" }
   | { type: "CANCEL_DB_PICKER" }
@@ -311,6 +315,7 @@ export interface ReorderTaskInput {
 export interface CreateWorkspaceInput {
   client: ITaskClient;
   taskId: number;
+  template?: string | null;
 }
 
 export interface UpdateTitleInput {
@@ -358,6 +363,7 @@ export type UiMode =
   | "changingRecurrence"
   | "changingDuration"
   | "addingAttachment"
+  | "pickingTemplate"
   | "creatingWorkspace"
   | "pickingDatabase"
   | "switchingDatabase"

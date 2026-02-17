@@ -38,6 +38,7 @@ function createTestContext(overrides: Partial<TuiContext> = {}): TuiContext {
     titleText: "",
     gcalDurationText: "1",
     durationText: "",
+    selectedTemplateName: null,
     pendingSelectTaskId: null,
     lastSelectedTaskId: null,
     paletteFilter: "",

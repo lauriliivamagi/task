@@ -59,14 +59,31 @@ export const workCommand = {
     // Handle --list-templates
     if (args["list-templates"]) {
       try {
+        const config = await getConfig();
+
+        // Show configured external templates
+        if (config.work.templates && config.work.templates.length > 0) {
+          console.log("Configured templates:");
+          for (const tmpl of config.work.templates) {
+            console.log(`  - ${tmpl.name} (${tmpl.path})`);
+            if (tmpl.description) {
+              console.log(`    ${tmpl.description}`);
+            }
+          }
+          console.log();
+        }
+
+        // Show built-in templates
         const templates = await listWorkspaceTemplates();
-        console.log(`Templates directory: ${getWorkspaceTemplatesDir()}\n`);
-        console.log("Available workspace templates:");
+        console.log(`Built-in templates (${getWorkspaceTemplatesDir()}):`);
         for (const t of templates) {
           console.log(`  - ${t}`);
         }
         console.log(
           "\nCreate custom templates by adding directories to the templates folder.",
+        );
+        console.log(
+          "Configure external templates in ~/.task-cli/config.json under work.templates.",
         );
       } catch (error) {
         console.error((error as Error).message);

@@ -111,7 +111,9 @@ export const createWorkspaceActor = fromPromise<
   { path: string; existed: boolean },
   CreateWorkspaceInput
 >(async ({ input }) => {
-  const result = await input.client.createWorkspace(input.taskId);
+  const result = await input.client.createWorkspace(input.taskId, {
+    template: input.template ?? undefined,
+  });
   return { path: result.path, existed: result.existed ?? false };
 });
 

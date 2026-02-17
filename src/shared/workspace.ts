@@ -7,19 +7,11 @@
 import { copy, ensureDir, exists } from "@std/fs";
 import { join } from "@std/path";
 import type { TaskFull } from "./schemas.ts";
+import type { WorkConfig, WorkspaceTemplate } from "./config.ts";
 
 const HOME = Deno.env.get("HOME") || ".";
 const TASK_CLI_DIR = join(HOME, ".task-cli");
 const WORKSPACE_TEMPLATES_DIR = join(TASK_CLI_DIR, "workspace-templates");
-
-export interface WorkConfig {
-  repos_dir: string;
-  default_template: string;
-  ide_command: string;
-  ide_args: string[];
-  naming: string;
-  auto_commit: boolean;
-}
 
 export const DEFAULT_WORK_CONFIG: WorkConfig = {
   repos_dir: "~/git",
@@ -345,6 +337,60 @@ async function copyTemplateFiles(
 }
 
 /**
+ * Find an external template by name (case-insensitive) from config
+ */
+export function findExternalTemplate(
+  templateName: string,
+  templates?: WorkspaceTemplate[],
+): WorkspaceTemplate | undefined {
+  if (!templates || templates.length === 0) return undefined;
+  return templates.find(
+    (t) => t.name.toLowerCase() === templateName.toLowerCase(),
+  );
+}
+
+/**
+ * Copy external template files to workspace, excluding .git/
+ * Applies variable substitution to text files; copies binary files as-is.
+ */
+async function copyExternalTemplate(
+  srcDir: string,
+  targetDir: string,
+  task: TaskFull,
+  repoName: string,
+): Promise<void> {
+  for await (const entry of Deno.readDir(srcDir)) {
+    // Skip .git directory
+    if (entry.name === ".git") continue;
+
+    const srcPath = join(srcDir, entry.name);
+    const destPath = join(targetDir, entry.name);
+
+    if (entry.isDirectory) {
+      await ensureDir(destPath);
+      await copyExternalTemplate(srcPath, destPath, task, repoName);
+    } else if (entry.isFile) {
+      try {
+        const content = await Deno.readTextFile(srcPath);
+        const processed = applyTemplateVariables(
+          content,
+          task,
+          repoName,
+          targetDir,
+        );
+        await Deno.writeTextFile(destPath, processed);
+      } catch {
+        // Binary file — copy as-is
+        await copy(srcPath, destPath, { overwrite: true });
+      }
+    } else if (entry.isSymlink) {
+      // Copy symlinks by resolving and copying the file
+      await copy(srcPath, destPath, { overwrite: true });
+    }
+  }
+}
+
+/**
  * Run post-create hook if it exists
  */
 async function runPostCreateHook(
@@ -476,58 +522,86 @@ export async function createWorkspace(
     throw new Error(`Workspace already exists: ${workspacePath}`);
   }
 
-  // Ensure templates exist
-  await ensureDir(WORKSPACE_TEMPLATES_DIR);
-  await ensureDefaultTemplate();
-
-  // Find template
+  // Check for external template first
   const templateName = options.template || config.default_template;
-  const templateDir = join(WORKSPACE_TEMPLATES_DIR, templateName);
+  const externalTemplate = findExternalTemplate(templateName, config.templates);
 
-  if (!(await exists(templateDir))) {
-    throw new Error(
-      `Template '${templateName}' not found. Available templates: ${
-        (
-          await listWorkspaceTemplates()
-        ).join(", ")
-      }`,
+  if (externalTemplate) {
+    // External template: template owns the workspace structure
+    const extPath = expandPath(externalTemplate.path);
+    if (!(await exists(extPath))) {
+      throw new Error(
+        `External template path not found: ${extPath}`,
+      );
+    }
+
+    await ensureDir(workspacePath);
+    await copyExternalTemplate(extPath, workspacePath, task, repoName);
+
+    // Only add .task-ref.json for bidirectional linking
+    const taskRef = generateTaskRef(task);
+    await Deno.writeTextFile(
+      join(workspacePath, ".task-ref.json"),
+      taskRef,
     );
+
+    // Initialize git repository
+    await initGitRepo(workspacePath, task, config.auto_commit);
+
+    // Run post-create hook from external template if it exists
+    await runPostCreateHook(extPath, workspacePath);
+  } else {
+    // Built-in template: existing behavior
+    await ensureDir(WORKSPACE_TEMPLATES_DIR);
+    await ensureDefaultTemplate();
+
+    const templateDir = join(WORKSPACE_TEMPLATES_DIR, templateName);
+
+    if (!(await exists(templateDir))) {
+      throw new Error(
+        `Template '${templateName}' not found. Available templates: ${
+          (
+            await listWorkspaceTemplates()
+          ).join(", ")
+        }`,
+      );
+    }
+
+    // Create workspace directory structure
+    await ensureDir(workspacePath);
+    await ensureDir(join(workspacePath, "input"));
+    await ensureDir(join(workspacePath, "output"));
+
+    // Copy template files
+    await copyTemplateFiles(templateDir, workspacePath, task, repoName);
+
+    // Generate README.md
+    const readme = generateReadme(task, workspacePath);
+    await Deno.writeTextFile(join(workspacePath, "README.md"), readme);
+
+    // Generate CLAUDE.md
+    const claudeMd = generateClaudeMd(task, workspacePath);
+    await Deno.writeTextFile(join(workspacePath, "CLAUDE.md"), claudeMd);
+
+    // Generate .task-ref.json in input/
+    const taskRef = generateTaskRef(task);
+    await Deno.writeTextFile(
+      join(workspacePath, "input", ".task-ref.json"),
+      taskRef,
+    );
+
+    // Create .gitkeep in output/
+    await Deno.writeTextFile(join(workspacePath, "output", ".gitkeep"), "");
+
+    // Copy attachments
+    await copyAttachments(task, join(workspacePath, "input"));
+
+    // Initialize git repository
+    await initGitRepo(workspacePath, task, config.auto_commit);
+
+    // Run post-create hook
+    await runPostCreateHook(templateDir, workspacePath);
   }
-
-  // Create workspace directory structure
-  await ensureDir(workspacePath);
-  await ensureDir(join(workspacePath, "input"));
-  await ensureDir(join(workspacePath, "output"));
-
-  // Copy template files
-  await copyTemplateFiles(templateDir, workspacePath, task, repoName);
-
-  // Generate README.md
-  const readme = generateReadme(task, workspacePath);
-  await Deno.writeTextFile(join(workspacePath, "README.md"), readme);
-
-  // Generate CLAUDE.md
-  const claudeMd = generateClaudeMd(task, workspacePath);
-  await Deno.writeTextFile(join(workspacePath, "CLAUDE.md"), claudeMd);
-
-  // Generate .task-ref.json in input/
-  const taskRef = generateTaskRef(task);
-  await Deno.writeTextFile(
-    join(workspacePath, "input", ".task-ref.json"),
-    taskRef,
-  );
-
-  // Create .gitkeep in output/
-  await Deno.writeTextFile(join(workspacePath, "output", ".gitkeep"), "");
-
-  // Copy attachments
-  await copyAttachments(task, join(workspacePath, "input"));
-
-  // Initialize git repository
-  await initGitRepo(workspacePath, task, config.auto_commit);
-
-  // Run post-create hook
-  await runPostCreateHook(templateDir, workspacePath);
 
   // Open IDE
   let opened = false;

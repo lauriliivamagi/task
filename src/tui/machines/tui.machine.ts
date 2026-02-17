@@ -97,6 +97,7 @@ export const tuiMachine = setup({
     titleText: "",
     gcalDurationText: "1",
     durationText: "",
+    selectedTemplateName: null,
     pendingSelectTaskId: null,
     lastSelectedTaskId: input.lastSelectedTaskId ?? null,
     paletteFilter: "",
@@ -698,7 +699,7 @@ export const tuiMachine = setup({
             START_CREATE_TASK: "creatingTask",
             START_SEARCH: "searching",
             START_WORK: {
-              target: "creatingWorkspace",
+              target: "pickingTemplate",
               guard: "hasSelectedTask",
             },
             CLEAR_SEARCH: {
@@ -996,6 +997,20 @@ export const tuiMachine = setup({
           },
         },
 
+        pickingTemplate: {
+          on: {
+            CANCEL_TEMPLATE_PICKER: {
+              target: "normal.hist",
+            },
+            SELECT_TEMPLATE: {
+              target: "creatingWorkspace",
+              actions: assign({
+                selectedTemplateName: ({ event }) => event.templateName,
+              }),
+            },
+          },
+        },
+
         creatingWorkspace: {
           invoke: {
             id: "createWorkspace",
@@ -1009,21 +1024,27 @@ export const tuiMachine = setup({
               return {
                 client: context.client,
                 taskId: context.selectedTask.id,
+                template: context.selectedTemplateName,
               };
             },
             onDone: {
               target: "normal.hist",
-              // Refresh to show status change (todo -> in-progress)
-              actions: raise({ type: "REFRESH" }),
+              actions: [
+                assign({ selectedTemplateName: null }),
+                raise({ type: "REFRESH" }),
+              ],
             },
             onError: {
               target: "normal.hist",
-              actions: assign({
-                error: ({ event }) =>
-                  event.error instanceof Error
-                    ? event.error.message
-                    : "Failed to create workspace",
-              }),
+              actions: [
+                assign({ selectedTemplateName: null }),
+                assign({
+                  error: ({ event }) =>
+                    event.error instanceof Error
+                      ? event.error.message
+                      : "Failed to create workspace",
+                }),
+              ],
             },
           },
         },

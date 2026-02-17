@@ -6,6 +6,7 @@ export { CommandPalette } from "./CommandPalette.tsx";
 export { CreateTaskInput } from "./CreateTaskInput.tsx";
 export { Help } from "./Help.tsx";
 export { DatabasePicker } from "./DatabasePicker.tsx";
+export { TemplatePicker } from "./TemplatePicker.tsx";
 export { EditOverlay } from "./EditOverlay.tsx";
 export { EditTitleInput } from "./EditTitleInput.tsx";
 export { SearchInput } from "./SearchInput.tsx";

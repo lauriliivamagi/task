@@ -4,6 +4,7 @@ import { join } from "@std/path";
 import { assertResolvesTo } from "../test/test-utils.ts";
 import {
   createWorkspace,
+  findExternalTemplate,
   generateClaudeMd,
   generateReadme,
   generateTaskRef,
@@ -12,6 +13,7 @@ import {
   slugify,
 } from "./workspace.ts";
 import type { TaskFull } from "./schemas.ts";
+import { ensureDir } from "@std/fs";
 
 // Test data
 const mockTask: TaskFull = {
@@ -275,6 +277,188 @@ Deno.test("createWorkspace - custom name overrides default", async () => {
 
     assertEquals(result.name, "my-custom-workspace");
     assertEquals(result.path.endsWith("my-custom-workspace"), true);
+  } finally {
+    await Deno.remove(tempDir, { recursive: true });
+  }
+});
+
+// ============================================================================
+// External template tests
+// ============================================================================
+
+Deno.test("findExternalTemplate - finds template by name (case-insensitive)", () => {
+  const templates = [
+    { name: "Knowledge Work", path: "/home/user/templates/knowledge" },
+    { name: "Software", path: "/home/user/templates/software" },
+  ];
+
+  const found = findExternalTemplate("knowledge work", templates);
+  assertEquals(found?.name, "Knowledge Work");
+
+  const found2 = findExternalTemplate("SOFTWARE", templates);
+  assertEquals(found2?.name, "Software");
+});
+
+Deno.test("findExternalTemplate - returns undefined for no match", () => {
+  const templates = [
+    { name: "Knowledge Work", path: "/home/user/templates/knowledge" },
+  ];
+
+  assertEquals(findExternalTemplate("nonexistent", templates), undefined);
+  assertEquals(findExternalTemplate("test", undefined), undefined);
+  assertEquals(findExternalTemplate("test", []), undefined);
+});
+
+Deno.test("createWorkspace - external template copies files and excludes .git", async () => {
+  const tempDir = await Deno.makeTempDir();
+  const templateDir = join(tempDir, "template");
+  const reposDir = join(tempDir, "repos");
+
+  try {
+    // Create a fake external template with .git dir, dotfiles, and regular files
+    await ensureDir(templateDir);
+    await ensureDir(join(templateDir, ".git"));
+    await ensureDir(join(templateDir, ".vscode"));
+    await ensureDir(join(templateDir, "src"));
+
+    await Deno.writeTextFile(
+      join(templateDir, ".git", "HEAD"),
+      "ref: refs/heads/main",
+    );
+    await Deno.writeTextFile(
+      join(templateDir, ".gitignore"),
+      "node_modules/\n",
+    );
+    await Deno.writeTextFile(
+      join(templateDir, ".vscode", "settings.json"),
+      '{"editor.formatOnSave": true}',
+    );
+    await Deno.writeTextFile(
+      join(templateDir, "README.md"),
+      "# {{task.title}}\n\nTask #{{task.id}}",
+    );
+    await Deno.writeTextFile(
+      join(templateDir, "src", "main.ts"),
+      "// Project: {{task.project}}",
+    );
+
+    const result = await createWorkspace({
+      task: mockTask,
+      template: "My Template",
+      noOpen: true,
+      config: {
+        repos_dir: reposDir,
+        default_template: "default",
+        ide_command: "echo",
+        naming: "{{task.id}}-{{task.slug}}",
+        auto_commit: true,
+        templates: [
+          { name: "My Template", path: templateDir },
+        ],
+      },
+    });
+
+    // Workspace created
+    await assertResolvesTo(exists(result.path), true);
+
+    // .git from template is excluded (a new .git is initialized)
+    await assertResolvesTo(exists(join(result.path, ".git")), true);
+    // The template's .git/HEAD should NOT exist (fresh git init)
+    const gitHead = await Deno.readTextFile(join(result.path, ".git", "HEAD"));
+    assertEquals(gitHead.includes("ref: refs/heads/"), true);
+
+    // Dotfiles are copied
+    await assertResolvesTo(exists(join(result.path, ".gitignore")), true);
+    await assertResolvesTo(
+      exists(join(result.path, ".vscode", "settings.json")),
+      true,
+    );
+
+    // Regular files are copied with variable substitution
+    const readme = await Deno.readTextFile(join(result.path, "README.md"));
+    assertEquals(readme.includes("Fix authentication bug"), true);
+    assertEquals(readme.includes("Task #42"), true);
+
+    const mainTs = await Deno.readTextFile(join(result.path, "src", "main.ts"));
+    assertEquals(mainTs.includes("Backend"), true);
+
+    // .task-ref.json is added at root
+    await assertResolvesTo(exists(join(result.path, ".task-ref.json")), true);
+    const taskRef = JSON.parse(
+      await Deno.readTextFile(join(result.path, ".task-ref.json")),
+    );
+    assertEquals(taskRef.task_id, 42);
+
+    // No auto-generated README.md/CLAUDE.md/input/output (template owns structure)
+    // README.md exists but is from template, not generated
+    assertEquals(readme.includes("Acceptance Criteria"), false);
+    // No input/ or output/ dirs (template doesn't have them)
+    await assertResolvesTo(exists(join(result.path, "input")), false);
+    await assertResolvesTo(exists(join(result.path, "output")), false);
+  } finally {
+    await Deno.remove(tempDir, { recursive: true });
+  }
+});
+
+Deno.test("createWorkspace - external template not found throws error", async () => {
+  const tempDir = await Deno.makeTempDir();
+  const reposDir = join(tempDir, "repos");
+
+  try {
+    await assertRejects(
+      () =>
+        createWorkspace({
+          task: mockTask,
+          template: "My Template",
+          noOpen: true,
+          config: {
+            repos_dir: reposDir,
+            default_template: "default",
+            ide_command: "echo",
+            naming: "{{task.id}}-{{task.slug}}",
+            auto_commit: false,
+            templates: [
+              {
+                name: "My Template",
+                path: "/nonexistent/path/template",
+              },
+            ],
+          },
+        }),
+      Error,
+      "External template path not found",
+    );
+  } finally {
+    await Deno.remove(tempDir, { recursive: true });
+  }
+});
+
+Deno.test("createWorkspace - falls through to built-in when template name does not match external", async () => {
+  const tempDir = await Deno.makeTempDir();
+  const reposDir = join(tempDir, "repos");
+
+  try {
+    // Use "default" built-in template (no external match)
+    const result = await createWorkspace({
+      task: mockTask,
+      noOpen: true,
+      config: {
+        repos_dir: reposDir,
+        default_template: "default",
+        ide_command: "echo",
+        naming: "{{task.id}}-{{task.slug}}",
+        auto_commit: false,
+        templates: [
+          { name: "Other Template", path: "/some/path" },
+        ],
+      },
+    });
+
+    // Should use built-in template (generates README.md, CLAUDE.md, input/, output/)
+    await assertResolvesTo(exists(join(result.path, "README.md")), true);
+    await assertResolvesTo(exists(join(result.path, "CLAUDE.md")), true);
+    await assertResolvesTo(exists(join(result.path, "input")), true);
+    await assertResolvesTo(exists(join(result.path, "output")), true);
   } finally {
     await Deno.remove(tempDir, { recursive: true });
   }
