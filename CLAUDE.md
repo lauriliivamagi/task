@@ -454,6 +454,55 @@ and TypeScript types.
 - UTC storage, local display
 - ISO 8601 with full datetime precision
 
+### Workspace Templates
+
+The `w` key (or `task work <id>`) creates a git repo workspace for a task.
+Supports both built-in templates (`~/.task-cli/workspace-templates/`) and
+external repo templates configured in `config.json`.
+
+**Configuration** via `~/.task-cli/config.json`:
+
+```json
+{
+  "work": {
+    "templates": [
+      { "name": "Knowledge Work", "path": "/home/user/git/knowledge-template" },
+      { "name": "Software", "path": "/home/user/git/software-template", "description": "For dev tasks" }
+    ]
+  }
+}
+```
+
+**Behavior:**
+
+- 0 external templates configured: uses built-in template (existing behavior)
+- 1 external template: auto-selects it (no picker shown)
+- 2+ external templates: shows TUI picker with j/k navigation
+
+**External templates** fully own the workspace structure. Files are copied
+(excluding `.git/`), `{{task.*}}` variables are substituted in text files,
+and only `.task-ref.json` is added. No README.md/CLAUDE.md/input/output are
+generated.
+
+**Built-in templates** (from `~/.task-cli/workspace-templates/`) generate
+README.md, CLAUDE.md, input/, output/ directories with task context.
+
+**Files:**
+
+- `src/shared/workspace.ts` — `createWorkspace()`, `copyExternalTemplate()`
+- `src/shared/config.ts` — `WorkspaceTemplate` type, config parsing
+- `src/tui/components/TemplatePicker.tsx` — TUI template picker component
+- `src/cli/cmd/work.ts` — CLI `work` command
+
+**CLI:**
+
+```bash
+task work <id>                          # Create workspace (shows picker if 2+ templates)
+task work <id> --template "Software"    # Use specific template by name
+task work <id> --list-templates         # List all templates
+task work <id> --open                   # Open existing workspace
+```
+
 ### Recurring Tasks
 
 Patterns: `daily`, `every day`, `every Monday`, `1st of month`, `yearly`
