@@ -117,6 +117,7 @@ export const TaskFull = TaskWithProject.extend({
     Attachment.pick({ id: true, filename: true, path: true, created_at: true }),
   ),
   tags: z.array(Tag.pick({ id: true, name: true })),
+  workspace: z.string().nullable(),
 });
 export type TaskFull = z.infer<typeof TaskFull>;
 

@@ -6,6 +6,7 @@
 
 import { Hono } from "hono";
 import { getDb } from "../../../db/client.ts";
+import { getWorkspaceFromContext } from "../../../shared/workspace.ts";
 import { parseTaskJsonFields } from "./helpers.ts";
 
 export const getRoute = new Hono();
@@ -59,12 +60,17 @@ getRoute.get("/:id", async (c) => {
     args: [id],
   });
 
+  const workspace = getWorkspaceFromContext(
+    task.context as Record<string, unknown> | null,
+  );
+
   const fullTask = {
     ...task,
     subtasks: subtasksResult.rows,
     comments: commentsResult.rows,
     attachments: attachmentsResult.rows,
     tags: tagsResult.rows,
+    workspace,
   };
 
   return c.json(fullTask);

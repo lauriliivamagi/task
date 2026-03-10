@@ -100,6 +100,7 @@ function createFullTask(): TaskFull {
     comments: [],
     attachments: [],
     tags: [],
+    workspace: null,
   };
 }
 

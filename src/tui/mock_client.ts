@@ -62,6 +62,7 @@ export class MockTaskClient implements ITaskClient {
         comments: [],
         attachments: [],
         tags: [],
+        workspace: null,
       },
       {
         id: 2,
@@ -95,6 +96,7 @@ export class MockTaskClient implements ITaskClient {
         ],
         attachments: [],
         tags: [],
+        workspace: null,
       },
       {
         id: 5,
@@ -119,6 +121,7 @@ export class MockTaskClient implements ITaskClient {
         comments: [],
         attachments: [],
         tags: [],
+        workspace: null,
       },
       {
         id: 6,
@@ -143,6 +146,7 @@ export class MockTaskClient implements ITaskClient {
         comments: [],
         attachments: [],
         tags: [],
+        workspace: null,
       },
     ];
 
@@ -171,6 +175,7 @@ export class MockTaskClient implements ITaskClient {
         comments: [],
         attachments: [],
         tags: [],
+        workspace: null,
       });
     }
   }
@@ -222,6 +227,7 @@ export class MockTaskClient implements ITaskClient {
       comments: [],
       attachments: [],
       tags: [],
+      workspace: null,
     };
     this.tasks.push(newTask);
     const { subtasks: _, comments: __, attachments: ___, ...rest } = newTask;

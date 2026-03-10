@@ -37,6 +37,11 @@ export const canCreateSubtask = ({ context }: { context: TuiContext }) => {
 export const hasValidProjectName = ({ context }: { context: TuiContext }) =>
   context.newProjectName.trim().length > 0;
 
+/** Check if the selected task already has a workspace */
+export const hasExistingWorkspace = ({ context }: { context: TuiContext }) =>
+  context.selectedTask?.workspace != null &&
+  context.selectedTask.workspace.length > 0;
+
 /** All guards for machine setup */
 export const guards = {
   hasSelectedTask,
@@ -46,4 +51,5 @@ export const guards = {
   canToggleStatus,
   canCreateSubtask,
   hasValidProjectName,
+  hasExistingWorkspace,
 };

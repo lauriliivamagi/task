@@ -45,6 +45,7 @@ function createTestTask(): TaskFull {
     comments: [],
     attachments: [],
     tags: [],
+    workspace: null,
   };
 }
 

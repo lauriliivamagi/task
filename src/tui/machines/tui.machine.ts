@@ -698,10 +698,16 @@ export const tuiMachine = setup({
             OPEN_HELP: "help",
             START_CREATE_TASK: "creatingTask",
             START_SEARCH: "searching",
-            START_WORK: {
-              target: "pickingTemplate",
-              guard: "hasSelectedTask",
-            },
+            START_WORK: [
+              {
+                target: "creatingWorkspace",
+                guard: "hasExistingWorkspace",
+              },
+              {
+                target: "pickingTemplate",
+                guard: "hasSelectedTask",
+              },
+            ],
             CLEAR_SEARCH: {
               actions: [
                 assign({ searchQuery: "" }),

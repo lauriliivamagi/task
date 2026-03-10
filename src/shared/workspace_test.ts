@@ -54,6 +54,7 @@ const mockTask: TaskFull = {
   ],
   attachments: [],
   tags: [{ id: 1, name: "bug" }, { id: 2, name: "auth" }],
+  workspace: null,
 };
 
 Deno.test("slugify - converts title to URL-friendly slug", () => {
