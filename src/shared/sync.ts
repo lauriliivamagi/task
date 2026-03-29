@@ -260,7 +260,7 @@ export async function setRemote(
  */
 export async function commitChanges(message?: string): Promise<GitResult> {
   await runGit(["add", "-A"]);
-  const commitMsg = message || `Sync: ${new Date().toISOString()}`;
+  const commitMsg = message || `Sync: ${Temporal.Now.instant().toString()}`;
   return await runGit(["commit", "-m", commitMsg]);
 }
 
@@ -432,7 +432,7 @@ export async function autoPush(): Promise<AutoSyncResult> {
     // Commit any pending changes first
     if (status.isDirty) {
       const commitResult = await commitChanges(
-        `Auto-sync: ${new Date().toISOString()}`,
+        `Auto-sync: ${Temporal.Now.instant().toString()}`,
       );
       if (!commitResult.success) {
         logger.warn(
@@ -517,7 +517,7 @@ export function scheduleAutoCommit(): void {
     }
 
     const result = await commitChanges(
-      `Auto-commit: ${new Date().toISOString()}`,
+      `Auto-commit: ${Temporal.Now.instant().toString()}`,
     );
     if (result.success) {
       logger.info("Auto-commit completed", "sync");

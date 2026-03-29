@@ -299,7 +299,8 @@ async function exchangeCodeForTokens(
 
   // Calculate expiry time
   const expiresInMs = (data.expires_in ?? 3600) * 1000;
-  const expiry = new Date(Date.now() + expiresInMs).toISOString();
+  const expiry = Temporal.Now.instant().add({ milliseconds: expiresInMs })
+    .toString();
 
   return {
     access_token: data.access_token,
@@ -345,7 +346,8 @@ export async function refreshAccessToken(
 
   // Calculate expiry time
   const expiresInMs = (data.expires_in ?? 3600) * 1000;
-  const expiry = new Date(Date.now() + expiresInMs).toISOString();
+  const expiry = Temporal.Now.instant().add({ milliseconds: expiresInMs })
+    .toString();
 
   return {
     access_token: data.access_token,

@@ -31,7 +31,7 @@ reportsRoute.get(
     } else if (from) {
       // From date only, default to today
       fromDate = from;
-      toDate = new Date().toISOString().split("T")[0];
+      toDate = Temporal.Now.plainDateISO().toString();
       label = formatPeriodLabel(from, toDate);
     } else if (period) {
       const range = getReportPeriodRange(period);

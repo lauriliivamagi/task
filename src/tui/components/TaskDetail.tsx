@@ -27,24 +27,21 @@ function formatLocalDate(utcString: string): string {
   let normalized: string;
 
   if (utcString.endsWith("Z")) {
-    // Already has Z suffix
     normalized = utcString;
   } else if (utcString.includes("T")) {
-    // Has time but no Z - append Z
     normalized = utcString + "Z";
   } else if (utcString.includes(" ") && utcString.length > 10) {
-    // SQLite datetime format: "YYYY-MM-DD HH:MM:SS" - replace space with T and append Z
     normalized = utcString.replace(" ", "T") + "Z";
   } else {
-    // Date-only: "YYYY-MM-DD" - append midnight UTC
     normalized = utcString + "T00:00:00Z";
   }
 
-  const date = new Date(normalized);
+  const instant = Temporal.Instant.from(normalized);
+  const local = instant.toZonedDateTimeISO(Temporal.Now.timeZoneId());
   const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${
-    pad(date.getDate())
-  } ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${local.year}-${pad(local.month)}-${
+    pad(local.day)
+  } ${pad(local.hour)}:${pad(local.minute)}`;
 }
 
 /** Split text into lines respecting terminal width and newlines */

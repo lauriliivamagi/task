@@ -28,17 +28,13 @@ const JS_TO_RRULE_WEEKDAY: any[] = [
 ];
 
 /**
- * Format a Date as ISO datetime string (YYYY-MM-DDTHH:MM:SSZ) in UTC.
+ * Format a Date as ISO datetime string in UTC using Temporal.
  */
 function formatDateTime(date: Date): string {
+  const instant = Temporal.Instant.fromEpochMilliseconds(date.getTime());
+  const utc = instant.toZonedDateTimeISO("UTC");
   const pad = (n: number) => String(n).padStart(2, "0");
-  const year = date.getUTCFullYear();
-  const month = pad(date.getUTCMonth() + 1);
-  const day = pad(date.getUTCDate());
-  const hours = pad(date.getUTCHours());
-  const minutes = pad(date.getUTCMinutes());
-  const seconds = pad(date.getUTCSeconds());
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+  return `${utc.year}-${pad(utc.month)}-${pad(utc.day)}T${pad(utc.hour)}:${pad(utc.minute)}:${pad(utc.second)}Z`;
 }
 
 /**
@@ -76,7 +72,7 @@ export function calculateNextDueDate(
   // If no current due date, use today as the base
   const baseDate = currentDueDate
     ? parseDate(currentDueDate)
-    : (referenceDate ?? new Date());
+    : (referenceDate ?? new Date(Temporal.Now.instant().epochMilliseconds));
 
   try {
     switch (rule.type) {
@@ -172,14 +168,14 @@ function calculateWeeklyWithDays(
 
 /**
  * Simple monthly recurrence: add N months (same day).
- * Uses JS Date arithmetic to handle month overflow correctly.
- * (e.g., Jan 30 + 1 month = Feb 30 which overflows to Mar 2)
+ * Uses Temporal which clamps overflow (e.g., Jan 31 + 1 month = Feb 28).
  */
 function calculateMonthly(baseDate: Date, interval: number): string {
-  // Use JS Date's setMonth which handles overflow correctly
-  const next = new Date(baseDate);
-  next.setUTCMonth(next.getUTCMonth() + interval);
-  return formatDateTime(next);
+  const instant = Temporal.Instant.fromEpochMilliseconds(baseDate.getTime());
+  const utc = instant.toZonedDateTimeISO("UTC");
+  const next = utc.add({ months: interval });
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${next.year}-${pad(next.month)}-${pad(next.day)}T${pad(next.hour)}:${pad(next.minute)}:${pad(next.second)}Z`;
 }
 
 /**
@@ -191,37 +187,23 @@ function calculateMonthlyDay(
   dayOfMonth: number | "last",
   interval: number,
 ): string {
-  // First, advance to the target month
-  let year = baseDate.getUTCFullYear();
-  let month = baseDate.getUTCMonth() + interval;
+  const instant = Temporal.Instant.fromEpochMilliseconds(baseDate.getTime());
+  const base = instant.toZonedDateTimeISO("UTC");
 
-  // Normalize month/year
-  while (month > 11) {
-    month -= 12;
-    year++;
-  }
+  // Advance to the target month (add months, clamp to day 1 to avoid overflow)
+  const targetMonth = base.with({ day: 1 }).add({ months: interval });
 
   let day: number;
   if (dayOfMonth === "last") {
-    // Last day of month: use bymonthday: -1
-    const lastDay = new Date(Date.UTC(year, month + 1, 0));
-    day = lastDay.getUTCDate();
+    day = targetMonth.daysInMonth;
   } else {
     // Specific day, clamped to last day of month
-    const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-    day = Math.min(dayOfMonth, lastDay);
+    day = Math.min(dayOfMonth, targetMonth.daysInMonth);
   }
 
-  const result = new Date(Date.UTC(
-    year,
-    month,
-    day,
-    baseDate.getUTCHours(),
-    baseDate.getUTCMinutes(),
-    baseDate.getUTCSeconds(),
-  ));
-
-  return formatDateTime(result);
+  const result = targetMonth.with({ day, hour: base.hour, minute: base.minute, second: base.second });
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${result.year}-${pad(result.month)}-${pad(result.day)}T${pad(result.hour)}:${pad(result.minute)}:${pad(result.second)}Z`;
 }
 
 /**
@@ -233,14 +215,14 @@ function calculateMonthlyNthWeekday(
   weekday: number,
   interval: number,
 ): string | null {
-  // Advance to target month
-  let year = baseDate.getUTCFullYear();
-  let month = baseDate.getUTCMonth() + interval;
+  const instant = Temporal.Instant.fromEpochMilliseconds(baseDate.getTime());
+  const base = instant.toZonedDateTimeISO("UTC");
 
-  while (month > 11) {
-    month -= 12;
-    year++;
-  }
+  // Advance to target month
+  const targetMonth = base.with({ day: 1 }).add({ months: interval });
+  let year = targetMonth.year;
+  // Temporal months are 1-indexed, rrule Date constructor needs 0-indexed
+  let month = targetMonth.month - 1;
 
   // Use rrule to find the Nth weekday in this month
   const rruleWeekday = JS_TO_RRULE_WEEKDAY[weekday];
@@ -283,27 +265,39 @@ function calculateMonthlyNthWeekday(
 
 /**
  * Yearly recurrence: add N years.
- * Uses JS Date arithmetic to handle Feb 29 correctly.
- * (e.g., Feb 29 2024 + 1 year = Feb 29 2025 which overflows to Mar 1)
+ * Uses Temporal which clamps overflow (e.g., Feb 29 + 1 year = Feb 28).
  */
 function calculateYearly(baseDate: Date, interval: number): string {
-  // Use JS Date's setFullYear which handles overflow correctly
-  const next = new Date(baseDate);
-  next.setUTCFullYear(next.getUTCFullYear() + interval);
-  return formatDateTime(next);
+  const instant = Temporal.Instant.fromEpochMilliseconds(baseDate.getTime());
+  const utc = instant.toZonedDateTimeISO("UTC");
+  const next = utc.add({ years: interval });
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${next.year}-${pad(next.month)}-${pad(next.day)}T${pad(next.hour)}:${pad(next.minute)}:${pad(next.second)}Z`;
 }
 
 /**
  * Format a date preserving the time from baseDate.
+ * Takes date portion from rrule result and time from original base.
  */
 function formatWithBaseTime(date: Date, baseDate: Date): string {
-  const result = new Date(Date.UTC(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    baseDate.getUTCHours(),
-    baseDate.getUTCMinutes(),
-    baseDate.getUTCSeconds(),
-  ));
-  return formatDateTime(result);
+  const baseInstant = Temporal.Instant.fromEpochMilliseconds(
+    baseDate.getTime(),
+  );
+  const baseUtc = baseInstant.toZonedDateTimeISO("UTC");
+
+  // rrule returns dates using local getters for the date portion
+  const resultDate = Temporal.PlainDate.from({
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+  });
+
+  const combined = resultDate.toPlainDateTime({
+    hour: baseUtc.hour,
+    minute: baseUtc.minute,
+    second: baseUtc.second,
+  });
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${combined.year}-${pad(combined.month)}-${pad(combined.day)}T${pad(combined.hour)}:${pad(combined.minute)}:${pad(combined.second)}Z`;
 }

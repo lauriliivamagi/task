@@ -244,10 +244,8 @@ export function calculateEndTime(
   startIso: string,
   durationHours: number,
 ): string {
-  const start = new Date(startIso);
-  const durationMs = durationHours * 60 * 60 * 1000;
-  const end = new Date(start.getTime() + durationMs);
-  return end.toISOString();
+  const start = Temporal.Instant.from(startIso);
+  return start.add({ hours: durationHours }).toString();
 }
 
 /**

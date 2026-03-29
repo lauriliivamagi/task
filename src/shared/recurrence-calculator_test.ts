@@ -147,13 +147,13 @@ Deno.test("calculateNextDueDate - monthly patterns", async (t) => {
     assertEquals(result, "2025-03-15T00:00:00Z");
   });
 
-  await t.step("handles month with fewer days - Feb 30 becomes Feb 28", () => {
+  await t.step("handles month with fewer days - Jan 30 clamps to Feb 28", () => {
     const result = calculateNextDueDate("2025-01-30T00:00:00Z", {
       type: "monthly",
       interval: 1,
     });
-    // February 2025 has 28 days
-    assertEquals(result, "2025-03-02T00:00:00Z"); // Date wraps to March
+    // February 2025 has 28 days - Temporal clamps to last day
+    assertEquals(result, "2025-02-28T00:00:00Z");
   });
 
   await t.step("calculates specific day of month", () => {
@@ -265,8 +265,8 @@ Deno.test("calculateNextDueDate - yearly patterns", async (t) => {
       type: "yearly",
       interval: 1,
     });
-    // 2025 is not a leap year, so Feb 29 becomes Mar 1
-    assertEquals(result, "2025-03-01T00:00:00Z");
+    // 2025 is not a leap year - Temporal clamps to Feb 28
+    assertEquals(result, "2025-02-28T00:00:00Z");
   });
 });
 

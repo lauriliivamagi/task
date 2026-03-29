@@ -264,7 +264,7 @@ export function generateTaskRef(task: TaskFull): string {
     {
       task_id: task.id,
       task_cli_path: TASK_CLI_DIR,
-      created_at: new Date().toISOString(),
+      created_at: Temporal.Now.instant().toString(),
       title: task.title,
     },
     null,
@@ -281,7 +281,7 @@ function applyTemplateVariables(
   repoName: string,
   repoPath: string,
 ): string {
-  const date = new Date().toISOString().split("T")[0];
+  const date = Temporal.Now.plainDateISO().toString();
   const subtasksMd = formatSubtasksMarkdown(task.subtasks);
   const commentsMd = formatCommentsMarkdown(task.comments);
 

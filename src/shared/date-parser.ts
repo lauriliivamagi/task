@@ -6,16 +6,6 @@
  */
 
 import * as chrono from "chrono-node";
-import {
-  endOfMonth,
-  endOfQuarter,
-  endOfWeek,
-  format,
-  getQuarter,
-  startOfMonth,
-  startOfQuarter,
-  startOfWeek,
-} from "date-fns";
 import { assertNonEmptyString } from "./assert.ts";
 
 /**
@@ -70,10 +60,11 @@ export function parseNaturalDate(
       second = startComponents.get("second") ?? 0;
     }
 
-    // Create local date from components and convert to UTC
-    // Note: Date constructor uses 0-indexed months, chrono returns 1-indexed
-    const localDate = new Date(year, month - 1, day, hour, minute, second);
-    return localDate.toISOString();
+    // Create local datetime from components and convert to UTC
+    // Temporal uses 1-indexed months (same as chrono), no footgun
+    const pdt = new Temporal.PlainDateTime(year, month, day, hour, minute, second);
+    const zdt = pdt.toZonedDateTime(Temporal.Now.timeZoneId());
+    return zdt.toInstant().toString();
   } catch {
     return null;
   }
@@ -161,11 +152,10 @@ export function normalizeDateToDateTime(input: string): string {
     }
   }
 
-  // Parse as local time (no Z suffix means JS treats it as local)
-  const localDate = new Date(localDateStr);
-
-  // Convert to UTC ISO string
-  return localDate.toISOString();
+  // Parse as local time and convert to UTC
+  const pdt = Temporal.PlainDateTime.from(localDateStr);
+  const zdt = pdt.toZonedDateTime(Temporal.Now.timeZoneId());
+  return zdt.toInstant().toString();
 }
 
 /**
@@ -180,69 +170,67 @@ export function formatDateTimeForEditing(utcString: string): string {
   if (!utcString) return "";
 
   try {
-    const date = new Date(utcString);
-    if (isNaN(date.getTime())) return "";
+    const instant = Temporal.Instant.from(utcString);
+    const local = instant.toZonedDateTimeISO(Temporal.Now.timeZoneId());
 
     const pad = (n: number) => String(n).padStart(2, "0");
-    const year = date.getFullYear();
-    const month = pad(date.getMonth() + 1);
-    const day = pad(date.getDate());
-    const hours = pad(date.getHours());
-    const minutes = pad(date.getMinutes());
-
-    return `${year}-${month}-${day} ${hours}:${minutes}`;
+    return `${local.year}-${pad(local.month)}-${pad(local.day)} ${pad(local.hour)}:${pad(local.minute)}`;
   } catch {
     return "";
   }
 }
 
 /**
- * Format a date as ISO string (YYYY-MM-DD) using date-fns.
- */
-function formatDate(date: Date): string {
-  return format(date, "yyyy-MM-dd");
-}
-
-/**
  * Get the Monday of the week containing the given date.
+ * Temporal.PlainDate.dayOfWeek: 1=Monday, 7=Sunday
  */
-function getMonday(date: Date): Date {
-  return startOfWeek(date, { weekStartsOn: 1 });
+function getMonday(date: Temporal.PlainDate): Temporal.PlainDate {
+  return date.subtract({ days: date.dayOfWeek - 1 });
 }
 
 /**
  * Get the Sunday of the week containing the given date.
  */
-function getSunday(date: Date): Date {
-  return endOfWeek(date, { weekStartsOn: 1 });
+function getSunday(date: Temporal.PlainDate): Temporal.PlainDate {
+  return date.add({ days: 7 - date.dayOfWeek });
 }
 
 /**
  * Get the first day of the month containing the given date.
  */
-function getFirstOfMonth(date: Date): Date {
-  return startOfMonth(date);
+function getFirstOfMonth(date: Temporal.PlainDate): Temporal.PlainDate {
+  return date.with({ day: 1 });
 }
 
 /**
  * Get the last day of the month containing the given date.
  */
-function getLastOfMonth(date: Date): Date {
-  return endOfMonth(date);
+function getLastOfMonth(date: Temporal.PlainDate): Temporal.PlainDate {
+  return date.with({ day: date.daysInMonth });
 }
 
 /**
  * Get the first day of the quarter containing the given date.
  */
-function getFirstOfQuarter(date: Date): Date {
-  return startOfQuarter(date);
+function getFirstOfQuarter(date: Temporal.PlainDate): Temporal.PlainDate {
+  const quarterStartMonth = Math.floor((date.month - 1) / 3) * 3 + 1;
+  return date.with({ month: quarterStartMonth, day: 1 });
 }
 
 /**
  * Get the last day of the quarter containing the given date.
  */
-function getLastOfQuarter(date: Date): Date {
-  return endOfQuarter(date);
+function getLastOfQuarter(date: Temporal.PlainDate): Temporal.PlainDate {
+  const quarterEndMonth = Math.floor((date.month - 1) / 3) * 3 + 3;
+  const endMonth = date.with({ month: quarterEndMonth, day: 1 });
+  return endMonth.with({ day: endMonth.daysInMonth });
+}
+
+/**
+ * Get the quarter number (1-4) for a date.
+ */
+function getQuarter(date: Temporal.PlainDate): number {
+  return Math.ceil(date.month / 3);
 }
 
 /**
@@ -276,47 +264,44 @@ const MONTH_NAMES = [
  */
 export function getReportPeriodRange(
   period: "week" | "month" | "quarter",
-  reference?: Date,
+  reference?: Temporal.PlainDate,
 ): { from: string; to: string; label: string } {
-  const ref = reference ?? new Date();
+  const ref = reference ?? Temporal.Now.plainDateISO();
 
   switch (period) {
     case "week": {
       const monday = getMonday(ref);
       const sunday = getSunday(ref);
-      const monStr = formatDate(monday);
-      const sunStr = formatDate(sunday);
 
       // Format label: "Week of Dec 2-8, 2025"
-      const monMonth = MONTH_NAMES[monday.getMonth()].slice(0, 3);
-      const sunMonth = MONTH_NAMES[sunday.getMonth()].slice(0, 3);
-      const year = sunday.getFullYear();
+      const monMonth = MONTH_NAMES[monday.month - 1].slice(0, 3);
+      const sunMonth = MONTH_NAMES[sunday.month - 1].slice(0, 3);
+      const year = sunday.year;
 
       let label: string;
-      if (monday.getMonth() === sunday.getMonth()) {
-        label =
-          `Week of ${monMonth} ${monday.getDate()}-${sunday.getDate()}, ${year}`;
+      if (monday.month === sunday.month) {
+        label = `Week of ${monMonth} ${monday.day}-${sunday.day}, ${year}`;
       } else {
         label =
-          `Week of ${monMonth} ${monday.getDate()} - ${sunMonth} ${sunday.getDate()}, ${year}`;
+          `Week of ${monMonth} ${monday.day} - ${sunMonth} ${sunday.day}, ${year}`;
       }
 
-      return { from: monStr, to: sunStr, label };
+      return { from: monday.toString(), to: sunday.toString(), label };
     }
 
     case "month": {
       const first = getFirstOfMonth(ref);
       const last = getLastOfMonth(ref);
-      const label = `${MONTH_NAMES[ref.getMonth()]} ${ref.getFullYear()}`;
-      return { from: formatDate(first), to: formatDate(last), label };
+      const label = `${MONTH_NAMES[ref.month - 1]} ${ref.year}`;
+      return { from: first.toString(), to: last.toString(), label };
     }
 
     case "quarter": {
       const quarter = getQuarter(ref);
       const first = getFirstOfQuarter(ref);
       const last = getLastOfQuarter(ref);
-      const label = `Q${quarter} ${ref.getFullYear()}`;
-      return { from: formatDate(first), to: formatDate(last), label };
+      const label = `Q${quarter} ${ref.year}`;
+      return { from: first.toString(), to: last.toString(), label };
     }
   }
 }
@@ -329,31 +314,28 @@ export function getReportPeriodRange(
  * @returns Human-readable label
  */
 export function formatPeriodLabel(from: string, to: string): string {
-  const fromDate = new Date(from + "T00:00:00");
-  const toDate = new Date(to + "T00:00:00");
+  const fromDate = Temporal.PlainDate.from(from);
+  const toDate = Temporal.PlainDate.from(to);
 
-  const fromMonth = MONTH_NAMES[fromDate.getMonth()].slice(0, 3);
-  const toMonth = MONTH_NAMES[toDate.getMonth()].slice(0, 3);
+  const fromMonth = MONTH_NAMES[fromDate.month - 1].slice(0, 3);
+  const toMonth = MONTH_NAMES[toDate.month - 1].slice(0, 3);
 
   if (from === to) {
-    return `${fromMonth} ${fromDate.getDate()}, ${fromDate.getFullYear()}`;
+    return `${fromMonth} ${fromDate.day}, ${fromDate.year}`;
   }
 
-  if (
-    fromDate.getFullYear() === toDate.getFullYear() &&
-    fromDate.getMonth() === toDate.getMonth()
-  ) {
+  if (fromDate.year === toDate.year && fromDate.month === toDate.month) {
     // Same month and year
-    return `${fromMonth} ${fromDate.getDate()}-${toDate.getDate()}, ${fromDate.getFullYear()}`;
+    return `${fromMonth} ${fromDate.day}-${toDate.day}, ${fromDate.year}`;
   }
 
-  if (fromDate.getFullYear() === toDate.getFullYear()) {
+  if (fromDate.year === toDate.year) {
     // Same year, different months
-    return `${fromMonth} ${fromDate.getDate()} - ${toMonth} ${toDate.getDate()}, ${fromDate.getFullYear()}`;
+    return `${fromMonth} ${fromDate.day} - ${toMonth} ${toDate.day}, ${fromDate.year}`;
   }
 
   // Different years
-  return `${fromMonth} ${fromDate.getDate()}, ${fromDate.getFullYear()} - ${toMonth} ${toDate.getDate()}, ${toDate.getFullYear()}`;
+  return `${fromMonth} ${fromDate.day}, ${fromDate.year} - ${toMonth} ${toDate.day}, ${toDate.year}`;
 }
 
 /**

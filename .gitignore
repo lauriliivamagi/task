@@ -4,3 +4,4 @@ coverage/
 coverage_profile/
 node_modules/
 .serena/
+.firecrawl/

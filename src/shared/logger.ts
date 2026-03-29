@@ -67,8 +67,7 @@ class Logger {
    * Get today's date string for log file naming.
    */
   private getDateString(): string {
-    const now = new Date();
-    return now.toISOString().split("T")[0]; // YYYY-MM-DD
+    return Temporal.Now.plainDateISO().toString(); // YYYY-MM-DD
   }
 
   /**
@@ -137,7 +136,7 @@ class Logger {
     const file = await this.getLogFile();
     if (!file) return;
 
-    const timestamp = new Date().toISOString();
+    const timestamp = Temporal.Now.instant().toString();
     const levelStr = level.toUpperCase().padEnd(5);
     const contextStr = context ? `[${context}] ` : "";
     const dataStr = data ? ` ${JSON.stringify(data)}` : "";

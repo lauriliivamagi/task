@@ -108,9 +108,9 @@ export async function clearGcalTokens(): Promise<void> {
  * Returns false if tokens are expired or will expire within 5 minutes.
  */
 export function areTokensValid(tokens: GcalTokens): boolean {
-  const expiryDate = new Date(tokens.expiry);
-  const bufferMs = 5 * 60 * 1000; // 5 minutes buffer
-  return expiryDate.getTime() > Date.now() + bufferMs;
+  const expiry = Temporal.Instant.from(tokens.expiry);
+  const threshold = Temporal.Now.instant().add({ minutes: 5 });
+  return Temporal.Instant.compare(expiry, threshold) > 0;
 }
 
 /**

@@ -18,8 +18,9 @@ function localToUtc(
   hour = 0,
   minute = 0,
 ): string {
-  const localDate = new Date(year, month - 1, day, hour, minute, 0);
-  return localDate.toISOString();
+  const pdt = new Temporal.PlainDateTime(year, month, day, hour, minute, 0);
+  const zdt = pdt.toZonedDateTime(Temporal.Now.timeZoneId());
+  return zdt.toInstant().toString();
 }
 
 // ============================================================================
@@ -233,21 +234,21 @@ Deno.test("resolveDueDate - priority handling", async (t) => {
 Deno.test("getReportPeriodRange - week", async (t) => {
   await t.step("week spans Monday to Sunday", () => {
     // Jan 15, 2025 is a Wednesday
-    const ref = new Date("2025-01-15T10:00:00Z");
+    const ref = Temporal.PlainDate.from("2025-01-15");
     const result = getReportPeriodRange("week", ref);
     assertEquals(result.from, "2025-01-13"); // Monday
     assertEquals(result.to, "2025-01-19"); // Sunday
   });
 
   await t.step("week label format for same month", () => {
-    const ref = new Date("2025-01-15T10:00:00Z");
+    const ref = Temporal.PlainDate.from("2025-01-15");
     const result = getReportPeriodRange("week", ref);
     assertEquals(result.label, "Week of Jan 13-19, 2025");
   });
 
   await t.step("week spanning month boundary has correct label", () => {
     // Jan 30, 2025 - week spans Jan 27 - Feb 2
-    const ref = new Date("2025-01-30T10:00:00Z");
+    const ref = Temporal.PlainDate.from("2025-01-30");
     const result = getReportPeriodRange("week", ref);
     assertEquals(result.from, "2025-01-27");
     assertEquals(result.to, "2025-02-02");
@@ -257,7 +258,7 @@ Deno.test("getReportPeriodRange - week", async (t) => {
 
 Deno.test("getReportPeriodRange - month", async (t) => {
   await t.step("month spans first to last day", () => {
-    const ref = new Date("2025-01-15T10:00:00Z");
+    const ref = Temporal.PlainDate.from("2025-01-15");
     const result = getReportPeriodRange("month", ref);
     assertEquals(result.from, "2025-01-01");
     assertEquals(result.to, "2025-01-31");
@@ -265,7 +266,7 @@ Deno.test("getReportPeriodRange - month", async (t) => {
   });
 
   await t.step("February in non-leap year", () => {
-    const ref = new Date("2025-02-15T10:00:00Z");
+    const ref = Temporal.PlainDate.from("2025-02-15");
     const result = getReportPeriodRange("month", ref);
     assertEquals(result.from, "2025-02-01");
     assertEquals(result.to, "2025-02-28");
@@ -273,7 +274,7 @@ Deno.test("getReportPeriodRange - month", async (t) => {
   });
 
   await t.step("February in leap year", () => {
-    const ref = new Date("2024-02-15T10:00:00Z");
+    const ref = Temporal.PlainDate.from("2024-02-15");
     const result = getReportPeriodRange("month", ref);
     assertEquals(result.from, "2024-02-01");
     assertEquals(result.to, "2024-02-29");
@@ -283,7 +284,7 @@ Deno.test("getReportPeriodRange - month", async (t) => {
 
 Deno.test("getReportPeriodRange - quarter", async (t) => {
   await t.step("Q1 spans Jan 1 to Mar 31", () => {
-    const ref = new Date("2025-02-15T10:00:00Z");
+    const ref = Temporal.PlainDate.from("2025-02-15");
     const result = getReportPeriodRange("quarter", ref);
     assertEquals(result.from, "2025-01-01");
     assertEquals(result.to, "2025-03-31");
@@ -291,7 +292,7 @@ Deno.test("getReportPeriodRange - quarter", async (t) => {
   });
 
   await t.step("Q2 spans Apr 1 to Jun 30", () => {
-    const ref = new Date("2025-05-15T10:00:00Z");
+    const ref = Temporal.PlainDate.from("2025-05-15");
     const result = getReportPeriodRange("quarter", ref);
     assertEquals(result.from, "2025-04-01");
     assertEquals(result.to, "2025-06-30");
@@ -299,7 +300,7 @@ Deno.test("getReportPeriodRange - quarter", async (t) => {
   });
 
   await t.step("Q3 spans Jul 1 to Sep 30", () => {
-    const ref = new Date("2025-08-15T10:00:00Z");
+    const ref = Temporal.PlainDate.from("2025-08-15");
     const result = getReportPeriodRange("quarter", ref);
     assertEquals(result.from, "2025-07-01");
     assertEquals(result.to, "2025-09-30");
@@ -307,7 +308,7 @@ Deno.test("getReportPeriodRange - quarter", async (t) => {
   });
 
   await t.step("Q4 spans Oct 1 to Dec 31", () => {
-    const ref = new Date("2025-11-15T10:00:00Z");
+    const ref = Temporal.PlainDate.from("2025-11-15");
     const result = getReportPeriodRange("quarter", ref);
     assertEquals(result.from, "2025-10-01");
     assertEquals(result.to, "2025-12-31");
