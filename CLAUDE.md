@@ -584,6 +584,7 @@ operations (API calls, file ops).
 | `a`       | Add attachment          |
 | `Shift+O` | Open attachment         |
 | `Shift+X` | Delete attachment       |
+| `Shift+V` | Paste image attachment  |
 | `Shift+G` | Sync to Google Calendar |
 | `Tab`     | Switch to list          |
 

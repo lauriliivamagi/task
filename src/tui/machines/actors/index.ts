@@ -36,6 +36,7 @@ import {
   createTaskActor,
   editingActors,
   loadProjectsActor,
+  pasteImageAttachmentActor,
   updateDescriptionActor,
   updateDueDateActor,
   updatePriorityActor,
@@ -59,6 +60,7 @@ export {
   loadProjectsActor,
   loadTaskDetailActor,
   loadTasksActor,
+  pasteImageAttachmentActor,
   reorderTaskActor,
   switchDatabaseActor,
   syncPullActor,
@@ -100,6 +102,7 @@ export const actors = {
   updateDueDate: updateDueDateActor,
   updateTitle: updateTitleActor,
   addAttachment: addAttachmentActor,
+  pasteImageAttachment: pasteImageAttachmentActor,
   loadProjects: loadProjectsActor,
   createProjectAndAssign: createProjectAndAssignActor,
 };

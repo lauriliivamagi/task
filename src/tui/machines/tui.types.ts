@@ -175,6 +175,7 @@ export type TuiEvent =
   | { type: "START_CHANGE_PROJECT" }
   | { type: "START_CHANGE_DUE_DATE" }
   | { type: "START_ADD_ATTACHMENT" }
+  | { type: "PASTE_IMAGE_ATTACHMENT" }
   | { type: "START_CHANGE_TAGS" }
   | { type: "START_CHANGE_RECURRENCE" }
   | { type: "START_EDIT_TITLE" } // Detail view title editing
@@ -311,6 +312,11 @@ export interface AddAttachmentInput {
   client: ITaskClient;
   taskId: number;
   filepath: string;
+}
+
+export interface PasteImageAttachmentInput {
+  client: ITaskClient;
+  taskId: number;
 }
 
 export interface LoadProjectsInput {

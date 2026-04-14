@@ -809,6 +809,10 @@ export const tuiMachine = setup({
                     currentEditingMode: "addingAttachment",
                   }),
                 },
+                PASTE_IMAGE_ATTACHMENT: {
+                  target: "#tui.ui.pastingImageAttachment",
+                  guard: "hasSelectedTask",
+                },
                 START_CHANGE_TAGS: {
                   target: "#tui.ui.detailEditing",
                   guard: "hasSelectedTask",
@@ -1117,6 +1121,30 @@ export const tuiMachine = setup({
                   event.error instanceof Error
                     ? event.error.message
                     : "Failed to delete attachment",
+              }),
+            },
+          },
+        },
+
+        pastingImageAttachment: {
+          invoke: {
+            id: "pasteImageAttachment",
+            src: "pasteImageAttachment",
+            input: ({ context }) => ({
+              client: context.client,
+              taskId: context.selectedTask?.id ?? 0,
+            }),
+            onDone: {
+              target: "normal.hist",
+              actions: raise({ type: "REFRESH" }),
+            },
+            onError: {
+              target: "normal.hist",
+              actions: assign({
+                error: ({ event }) =>
+                  event.error instanceof Error
+                    ? event.error.message
+                    : "Failed to paste image",
               }),
             },
           },

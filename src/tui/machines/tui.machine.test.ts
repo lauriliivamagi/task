@@ -1065,6 +1065,38 @@ Deno.test({
     });
 
     await t.step(
+      "PASTE_IMAGE_ATTACHMENT without clipboard image sets error and returns to normal",
+      async () => {
+        const actor = createTestActor();
+        actor.start();
+        await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+        const tasks = actor.getSnapshot().context.tasks;
+        if (tasks.length === 0) {
+          actor.stop();
+          return;
+        }
+        actor.send({ type: "HIGHLIGHT_TASK", task: tasks[0] });
+        await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+        actor.send({ type: "TAB" });
+        actor.send({ type: "PASTE_IMAGE_ATTACHMENT" });
+
+        // Actor fails (no image on clipboard in test env) → returns to normal
+        await waitForState(
+          actor,
+          (state) => state.matches({ ui: "normal" }),
+        );
+        assertEquals(
+          typeof actor.getSnapshot().context.error,
+          "string",
+        );
+
+        actor.stop();
+      },
+    );
+
+    await t.step(
       "START_DELETE_ATTACHMENT with one attachment goes straight to confirm",
       async () => {
         const client = new MockTaskClient();

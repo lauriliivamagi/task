@@ -12,6 +12,7 @@ import type {
   CreateProjectAndAssignInput,
   CreateTaskInput,
   LoadProjectsInput,
+  PasteImageAttachmentInput,
   UpdateDescriptionInput,
   UpdateDueDateInput,
   UpdatePriorityInput,
@@ -25,6 +26,8 @@ import type {
 } from "../child-machines/detail-editing.types.ts";
 import { parseRecurrence } from "../../../shared/recurrence-parser.ts";
 import { resolveDueDate } from "../../../shared/date-parser.ts";
+import { readImageFromClipboard } from "../../../shared/clipboard.ts";
+import { MAX_ATTACHMENT_SIZE } from "../../../shared/limits.ts";
 
 export const createTaskActor = fromPromise<{ id: number }, CreateTaskInput>(
   async ({ input }) => {
@@ -111,6 +114,41 @@ export const addAttachmentActor = fromPromise<TaskFull, AddAttachmentInput>(
   async ({ input }) => {
     await input.client.addAttachment(input.taskId, input.filepath);
     return input.client.getTask(input.taskId);
+  },
+);
+
+export const pasteImageAttachmentActor = fromPromise<
+  TaskFull,
+  PasteImageAttachmentInput
+>(
+  async ({ input }) => {
+    const bytes = await readImageFromClipboard();
+    if (!bytes || bytes.length === 0) {
+      throw new Error("No image on clipboard");
+    }
+    if (bytes.length > MAX_ATTACHMENT_SIZE) {
+      throw new Error(
+        `Clipboard image exceeds ${MAX_ATTACHMENT_SIZE} bytes`,
+      );
+    }
+    const stamp = new Date()
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace(/\..+/, "")
+      .replace("T", "-");
+    const dir = await Deno.makeTempDir({ prefix: "task-clipboard-" });
+    const filepath = `${dir}/clipboard-${stamp}.png`;
+    try {
+      await Deno.writeFile(filepath, bytes);
+      await input.client.addAttachment(input.taskId, filepath);
+      return await input.client.getTask(input.taskId);
+    } finally {
+      try {
+        await Deno.remove(dir, { recursive: true });
+      } catch {
+        // best effort cleanup
+      }
+    }
   },
 );
 

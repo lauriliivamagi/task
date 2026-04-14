@@ -33,6 +33,60 @@ async function tryClipboardCommand(
 }
 
 /**
+ * Try reading binary data from a command's stdout.
+ * Returns the bytes on a zero exit + non-empty output, otherwise null.
+ */
+async function tryReadCommand(
+  cmd: string,
+  args: string[],
+): Promise<Uint8Array | null> {
+  try {
+    const process = new Deno.Command(cmd, {
+      args,
+      stdin: "null",
+      stdout: "piped",
+      stderr: "null",
+    });
+    const { success, stdout } = await process.output();
+    if (!success || stdout.length === 0) return null;
+    return stdout;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read a PNG image from the system clipboard.
+ * Returns the raw PNG bytes, or null if the clipboard has no image
+ * (or no supported clipboard tool is installed).
+ */
+export async function readImageFromClipboard(): Promise<Uint8Array | null> {
+  const os = Deno.build.os;
+
+  switch (os) {
+    case "linux": {
+      // Try Wayland first, then X11
+      const wl = await tryReadCommand("wl-paste", ["--type", "image/png"]);
+      if (wl) return wl;
+      const xc = await tryReadCommand("xclip", [
+        "-selection",
+        "clipboard",
+        "-t",
+        "image/png",
+        "-o",
+      ]);
+      if (xc) return xc;
+      return null;
+    }
+    case "darwin":
+      // Requires `brew install pngpaste` (no built-in CLI on macOS)
+      return await tryReadCommand("pngpaste", ["-"]);
+    default:
+      return null;
+  }
+}
+
+/**
  * Copy text to system clipboard
  * Returns true if successful, false otherwise
  */

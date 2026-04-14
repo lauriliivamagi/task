@@ -17,6 +17,7 @@ export {
   loadProjectsActor,
   loadTaskDetailActor,
   loadTasksActor,
+  pasteImageAttachmentActor,
   reorderTaskActor,
   switchDatabaseActor,
   syncPullActor,
