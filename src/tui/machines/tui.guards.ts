@@ -26,11 +26,9 @@ export const hasTasks = ({ context }: { context: TuiContext }) =>
 export const canToggleStatus = ({ context }: { context: TuiContext }) =>
   context.tasks[context.selectedIndex] !== undefined;
 
-/** Check if a subtask can be created (selected task must be a root task) */
+/** Check if a subtask can be created (requires any selected task) */
 export const canCreateSubtask = ({ context }: { context: TuiContext }) => {
-  const task = context.tasks[context.selectedIndex];
-  // Can only create subtask if task exists and is not already a subtask
-  return task !== undefined && !task.parent_id;
+  return context.tasks[context.selectedIndex] !== undefined;
 };
 
 /** Check if the new project name is valid (non-empty) */

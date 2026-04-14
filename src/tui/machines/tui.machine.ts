@@ -727,8 +727,11 @@ export const tuiMachine = setup({
                   target: "#tui.ui.creatingTask",
                   guard: "canCreateSubtask",
                   actions: assign({
-                    newTaskParentId: ({ context }) =>
-                      context.tasks[context.selectedIndex]?.id ?? null,
+                    newTaskParentId: ({ context }) => {
+                      const selected = context.tasks[context.selectedIndex];
+                      if (!selected) return null;
+                      return selected.parent_id ?? selected.id;
+                    },
                   }),
                 },
                 START_EDIT_TITLE_IN_LIST: {

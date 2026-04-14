@@ -204,13 +204,13 @@ Deno.test("canCreateSubtask - returns true for root task", () => {
   assertEquals(canCreateSubtask({ context }), true);
 });
 
-Deno.test("canCreateSubtask - returns false for subtask (has parent_id)", () => {
+Deno.test("canCreateSubtask - returns true for subtask (sibling creation)", () => {
   const context = createTestContext({
     tasks: [createTestTask({ parent_id: 1 })],
     selectedIndex: 0,
   });
 
-  assertEquals(canCreateSubtask({ context }), false);
+  assertEquals(canCreateSubtask({ context }), true);
 });
 
 Deno.test("canCreateSubtask - returns false when no task at index", () => {

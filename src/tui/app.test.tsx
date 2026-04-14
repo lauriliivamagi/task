@@ -1061,6 +1061,44 @@ Deno.test({
   },
 });
 
+Deno.test({
+  name: "TUI E2E - 'o' on a subtask creates a sibling under the same parent",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  fn: async () => {
+    const { lastFrame, stdin, client, unmount } = renderApp();
+
+    await waitForText(lastFrame, "Tasks", { timeout: 3000 });
+
+    // Cursor starts on first root task ("Buy groceries", id=1).
+    // Create first subtask under it.
+    stdin.write("o");
+    await delay(100);
+    await typeText(stdin, "First child", 10);
+    stdin.write(KEYS.ENTER);
+    await delay(300);
+
+    // After creation, cursor moves to the newly created subtask via
+    // pendingSelectTaskId. Pressing 'o' now should create a SIBLING
+    // (parent_id inherited from the subtask's parent, not the subtask itself).
+    stdin.write("o");
+    await delay(100);
+    await typeText(stdin, "Second child", 10);
+    stdin.write(KEYS.ENTER);
+    await delay(300);
+
+    const allTasks = await client.listTasks();
+    const firstChild = allTasks.find((t) => t.title === "First child");
+    const secondChild = allTasks.find((t) => t.title === "Second child");
+
+    assertEquals(firstChild?.parent_id, 1);
+    assertEquals(secondChild?.parent_id, 1);
+
+    unmount();
+    cleanup();
+  },
+});
+
 // === Refresh Tests ===
 
 Deno.test({
