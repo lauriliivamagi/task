@@ -99,6 +99,7 @@ export const tuiMachine = setup({
     gcalDurationText: "1",
     durationText: "",
     selectedTemplateName: null,
+    attachmentIdPendingDelete: null,
     pendingSelectTaskId: null,
     lastSelectedTaskId: input.lastSelectedTaskId ?? null,
     paletteFilter: "",
@@ -857,6 +858,20 @@ export const tuiMachine = setup({
                     },
                   },
                 ],
+                START_DELETE_ATTACHMENT: [
+                  {
+                    target: "#tui.ui.pickingAttachmentForDelete",
+                    guard: "hasMultipleAttachments",
+                  },
+                  {
+                    target: "#tui.ui.confirmingDeleteAttachment",
+                    guard: "hasExactlyOneAttachment",
+                    actions: assign({
+                      attachmentIdPendingDelete: ({ context }) =>
+                        context.selectedTask?.attachments?.[0]?.id ?? null,
+                    }),
+                  },
+                ],
               },
             },
             hist: { type: "history" },
@@ -1048,6 +1063,61 @@ export const tuiMachine = setup({
                 );
                 if (attachment?.path) context.openPath(attachment.path);
               },
+            },
+          },
+        },
+
+        pickingAttachmentForDelete: {
+          on: {
+            CANCEL_ATTACHMENT_PICKER: {
+              target: "normal.hist",
+            },
+            SELECT_ATTACHMENT_FOR_DELETE: {
+              target: "confirmingDeleteAttachment",
+              actions: assign({
+                attachmentIdPendingDelete: ({ event }) => event.attachmentId,
+              }),
+            },
+          },
+        },
+
+        confirmingDeleteAttachment: {
+          on: {
+            CANCEL: {
+              target: "normal.hist",
+              actions: assign({ attachmentIdPendingDelete: null }),
+            },
+            CONFIRM_DELETE_ATTACHMENT: {
+              target: "deletingAttachment",
+            },
+          },
+        },
+
+        deletingAttachment: {
+          invoke: {
+            id: "deleteAttachment",
+            src: "deleteAttachment",
+            input: ({ context }) => ({
+              client: context.client,
+              taskId: context.selectedTask?.id ?? 0,
+              attachmentId: context.attachmentIdPendingDelete ?? 0,
+            }),
+            onDone: {
+              target: "normal.hist",
+              actions: [
+                assign({ attachmentIdPendingDelete: null }),
+                raise({ type: "REFRESH" }),
+              ],
+            },
+            onError: {
+              target: "normal.hist",
+              actions: assign({
+                attachmentIdPendingDelete: null,
+                error: ({ event }) =>
+                  event.error instanceof Error
+                    ? event.error.message
+                    : "Failed to delete attachment",
+              }),
             },
           },
         },

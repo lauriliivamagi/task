@@ -450,6 +450,8 @@ const OVERLAY_MODES = [
   "enteringGcalDuration",
   "confirmingDelete",
   "deletingTask",
+  "confirmingDeleteAttachment",
+  "deletingAttachment",
 ];
 
 // === TUI Content (inside context) ===
@@ -482,8 +484,9 @@ function TuiContent(): React.ReactElement {
   // Check if we're picking a template
   const isPickingTemplate = mode === "pickingTemplate";
 
-  // Check if we're picking an attachment to open
-  const isPickingAttachment = mode === "pickingAttachment";
+  // Check if we're picking an attachment to open or delete
+  const isPickingAttachment = mode === "pickingAttachment" ||
+    mode === "pickingAttachmentForDelete";
 
   // Determine header mode
   const headerMode: HeaderMode = isCommandPaletteOpen

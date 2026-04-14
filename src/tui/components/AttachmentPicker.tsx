@@ -23,6 +23,9 @@ export function AttachmentPicker(): React.ReactElement {
     (state) =>
       (state.context.selectedTask as TaskFull | null)?.attachments ?? [],
   );
+  const isDeleteMode = useTuiSelector((state) =>
+    state.matches({ ui: "pickingAttachmentForDelete" })
+  );
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   useInput((input, key) => {
@@ -34,10 +37,17 @@ export function AttachmentPicker(): React.ReactElement {
     }
 
     if (key.return) {
-      actorRef.send({
-        type: "SELECT_ATTACHMENT",
-        attachmentId: attachments[selectedIndex].id,
-      });
+      actorRef.send(
+        isDeleteMode
+          ? {
+            type: "SELECT_ATTACHMENT_FOR_DELETE",
+            attachmentId: attachments[selectedIndex].id,
+          }
+          : {
+            type: "SELECT_ATTACHMENT",
+            attachmentId: attachments[selectedIndex].id,
+          },
+      );
       return;
     }
 
@@ -56,14 +66,17 @@ export function AttachmentPicker(): React.ReactElement {
     <Box
       flexDirection="column"
       borderStyle={theme.borders.overlay}
-      borderColor={theme.colors.accent}
+      borderColor={isDeleteMode ? theme.colors.error : theme.colors.accent}
       paddingX={2}
       paddingY={1}
       width={pickerWidth}
     >
       <Box marginBottom={1} justifyContent="space-between">
-        <Text bold color={theme.colors.accent}>
-          Open Attachment
+        <Text
+          bold
+          color={isDeleteMode ? theme.colors.error : theme.colors.accent}
+        >
+          {isDeleteMode ? "Delete Attachment" : "Open Attachment"}
         </Text>
         <Text color={theme.colors.muted}>Esc to cancel</Text>
       </Box>
@@ -73,7 +86,7 @@ export function AttachmentPicker(): React.ReactElement {
           <Box key={`att-${att.id}`}>
             <Text
               color={idx === selectedIndex
-                ? theme.colors.accent
+                ? (isDeleteMode ? theme.colors.error : theme.colors.accent)
                 : theme.colors.text}
               bold={idx === selectedIndex}
             >
@@ -86,7 +99,7 @@ export function AttachmentPicker(): React.ReactElement {
 
       <Box marginTop={1}>
         <Text color={theme.colors.muted}>
-          ↑↓/jk navigate • Enter open
+          ↑↓/jk navigate • Enter {isDeleteMode ? "delete" : "open"}
         </Text>
       </Box>
     </Box>

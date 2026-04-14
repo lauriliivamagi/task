@@ -71,6 +71,10 @@ export interface ITaskClient {
   getGcalStatus(): Promise<{ authenticated: boolean; calendarId?: string }>;
   health(): Promise<{ status: string }>;
   deleteTask(id: number): Promise<{ deleted: boolean }>;
+  deleteAttachment(
+    taskId: number,
+    attachmentId: number,
+  ): Promise<{ deleted: boolean }>;
 }
 
 // === Machine Input ===
@@ -108,6 +112,7 @@ export interface TuiContext {
   gcalDurationText: string; // For gcal sync duration input
   durationText: string; // For task duration editing
   selectedTemplateName: string | null; // For workspace template selection
+  attachmentIdPendingDelete: number | null; // For attachment delete confirmation
 
   // Task to select after refresh (for newly created tasks)
   pendingSelectTaskId: number | null;
@@ -177,6 +182,9 @@ export type TuiEvent =
   | { type: "START_CHANGE_DURATION" } // Duration editing
   | { type: "START_DELETE_TASK" } // Delete task confirmation
   | { type: "CONFIRM_DELETE" } // Confirm task deletion
+  | { type: "START_DELETE_ATTACHMENT" } // Delete attachment flow
+  | { type: "CONFIRM_DELETE_ATTACHMENT" } // Confirm attachment deletion
+  | { type: "SELECT_ATTACHMENT_FOR_DELETE"; attachmentId: number }
   | { type: "CANCEL" }
   // Form input
   | { type: "UPDATE_TITLE"; value: string }
@@ -348,6 +356,12 @@ export interface UpdateDurationInput {
 export interface DeleteTaskInput {
   client: ITaskClient;
   taskId: number;
+}
+
+export interface DeleteAttachmentInput {
+  client: ITaskClient;
+  taskId: number;
+  attachmentId: number;
 }
 
 // === UI Mode Type (derived from state) ===

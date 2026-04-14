@@ -169,6 +169,16 @@ export function KeyboardHandler(): React.ReactElement | null {
         }
         return;
 
+      case "confirmingDeleteAttachment":
+        if (input === "y" || input === "Y") {
+          logDispatch("CONFIRM_DELETE_ATTACHMENT", mode, keyStr);
+          actorRef.send({ type: "CONFIRM_DELETE_ATTACHMENT" });
+        } else if (input === "n" || input === "N" || key.escape) {
+          logDispatch("CANCEL", mode, keyStr);
+          actorRef.send({ type: "CANCEL" });
+        }
+        return;
+
       // Dropdown/selection modes - handled by components directly
       case "changingStatus":
       case "changingPriority":

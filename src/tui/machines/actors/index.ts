@@ -15,6 +15,7 @@
 import {
   createWorkspaceActor,
   dataActors,
+  deleteAttachmentActor,
   deleteTaskActor,
   gcalSyncActor,
   loadTaskDetailActor,
@@ -51,6 +52,7 @@ export {
   createTaskActor,
   createWorkspaceActor,
   dataActors,
+  deleteAttachmentActor,
   deleteTaskActor,
   editingActors,
   gcalSyncActor,
@@ -87,6 +89,7 @@ export const actors = {
   gcalSync: gcalSyncActor,
   updateDuration: updateDurationActor,
   deleteTask: deleteTaskActor,
+  deleteAttachment: deleteAttachmentActor,
   // Editing actors (used by child machine, but kept here for backward compatibility)
   createTask: createTaskActor,
   addComment: addCommentActor,

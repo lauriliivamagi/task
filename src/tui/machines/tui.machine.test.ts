@@ -1063,6 +1063,125 @@ Deno.test({
 
       actor.stop();
     });
+
+    await t.step(
+      "START_DELETE_ATTACHMENT with one attachment goes straight to confirm",
+      async () => {
+        const client = new MockTaskClient();
+        await client.addAttachment(1, "/tmp/solo.txt");
+
+        const actor = createTestActor({ client });
+        actor.start();
+        await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+        const target = actor.getSnapshot().context.tasks.find((t) =>
+          t.id === 1
+        )!;
+        actor.send({ type: "HIGHLIGHT_TASK", task: target });
+        await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+        actor.send({ type: "TAB" });
+        actor.send({ type: "START_DELETE_ATTACHMENT" });
+
+        const snap = actor.getSnapshot();
+        assertEquals(
+          snap.matches({ ui: "confirmingDeleteAttachment" }),
+          true,
+        );
+        assertEquals(
+          typeof snap.context.attachmentIdPendingDelete === "number",
+          true,
+        );
+
+        actor.send({ type: "CONFIRM_DELETE_ATTACHMENT" });
+        await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+        const after = await client.listAttachments(1);
+        assertEquals(after.length, 0);
+
+        actor.stop();
+      },
+    );
+
+    await t.step(
+      "START_DELETE_ATTACHMENT with multiple attachments opens picker",
+      async () => {
+        const client = new MockTaskClient();
+        await client.addAttachment(1, "/tmp/a.txt");
+        const second = await client.addAttachment(1, "/tmp/b.txt");
+
+        const actor = createTestActor({ client });
+        actor.start();
+        await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+        const target = actor.getSnapshot().context.tasks.find((t) =>
+          t.id === 1
+        )!;
+        actor.send({ type: "HIGHLIGHT_TASK", task: target });
+        await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+        actor.send({ type: "TAB" });
+        actor.send({ type: "START_DELETE_ATTACHMENT" });
+
+        assertEquals(
+          actor.getSnapshot().matches({ ui: "pickingAttachmentForDelete" }),
+          true,
+        );
+
+        actor.send({
+          type: "SELECT_ATTACHMENT_FOR_DELETE",
+          attachmentId: second.id,
+        });
+
+        assertEquals(
+          actor.getSnapshot().matches({ ui: "confirmingDeleteAttachment" }),
+          true,
+        );
+        assertEquals(
+          actor.getSnapshot().context.attachmentIdPendingDelete,
+          second.id,
+        );
+
+        actor.send({ type: "CONFIRM_DELETE_ATTACHMENT" });
+        await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+        const remaining = await client.listAttachments(1);
+        assertEquals(remaining.length, 1);
+        assertEquals(remaining[0].id !== second.id, true);
+
+        actor.stop();
+      },
+    );
+
+    await t.step(
+      "CANCEL from confirmingDeleteAttachment clears pending id",
+      async () => {
+        const client = new MockTaskClient();
+        await client.addAttachment(1, "/tmp/solo.txt");
+
+        const actor = createTestActor({ client });
+        actor.start();
+        await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+        const target = actor.getSnapshot().context.tasks.find((t) =>
+          t.id === 1
+        )!;
+        actor.send({ type: "HIGHLIGHT_TASK", task: target });
+        await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+        actor.send({ type: "TAB" });
+        actor.send({ type: "START_DELETE_ATTACHMENT" });
+        actor.send({ type: "CANCEL" });
+
+        assertEquals(
+          actor.getSnapshot().context.attachmentIdPendingDelete,
+          null,
+        );
+        assertEquals((await client.listAttachments(1)).length, 1);
+
+        actor.stop();
+      },
+    );
   },
 });
 

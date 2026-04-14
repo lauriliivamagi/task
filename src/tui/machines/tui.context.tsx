@@ -83,11 +83,18 @@ export const selectUiMode = (state: TuiSnapshot) => {
   }
   if (state.matches({ ui: "pickingTemplate" })) return "pickingTemplate";
   if (state.matches({ ui: "pickingAttachment" })) return "pickingAttachment";
+  if (state.matches({ ui: "pickingAttachmentForDelete" })) {
+    return "pickingAttachmentForDelete";
+  }
   if (state.matches({ ui: "creatingWorkspace" })) return "creatingWorkspace";
   if (state.matches({ ui: "pickingDatabase" })) return "pickingDatabase";
   if (state.matches({ ui: "switchingDatabase" })) return "switchingDatabase";
   if (state.matches({ ui: "confirmingDelete" })) return "confirmingDelete";
   if (state.matches({ ui: "deletingTask" })) return "deletingTask";
+  if (state.matches({ ui: "confirmingDeleteAttachment" })) {
+    return "confirmingDeleteAttachment";
+  }
+  if (state.matches({ ui: "deletingAttachment" })) return "deletingAttachment";
 
   // Detail editing uses currentEditingMode from context (child machine state)
   if (state.matches({ ui: "detailEditing" })) {

@@ -8,6 +8,7 @@ import { fromPromise } from "xstate";
 import type { TaskFull, TaskWithProject } from "../../../shared/schemas.ts";
 import type {
   CreateWorkspaceInput,
+  DeleteAttachmentInput,
   DeleteTaskInput,
   GcalSyncInput,
   LoadTaskDetailInput,
@@ -280,6 +281,13 @@ export const deleteTaskActor = fromPromise<void, DeleteTaskInput>(
   },
 );
 
+/** Delete attachment actor - removes a single attachment from a task */
+export const deleteAttachmentActor = fromPromise<void, DeleteAttachmentInput>(
+  async ({ input }) => {
+    await input.client.deleteAttachment(input.taskId, input.attachmentId);
+  },
+);
+
 /** Data actors for machine setup */
 export const dataActors = {
   loadTasks: loadTasksActor,
@@ -294,4 +302,5 @@ export const dataActors = {
   gcalSync: gcalSyncActor,
   updateDuration: updateDurationActor,
   deleteTask: deleteTaskActor,
+  deleteAttachment: deleteAttachmentActor,
 };

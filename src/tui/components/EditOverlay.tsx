@@ -64,6 +64,9 @@ export function EditOverlay(): React.ReactElement | null {
     (state) => state.context.gcalDurationText,
   );
   const durationText = useTuiSelector((state) => state.context.durationText);
+  const attachmentIdPendingDelete = useTuiSelector(
+    (state) => state.context.attachmentIdPendingDelete,
+  );
 
   // Build project options for dropdown (includes "Create new project" option)
   const projectOptions: DropdownOption<number | null>[] = [
@@ -445,6 +448,21 @@ export function EditOverlay(): React.ReactElement | null {
         title="Delete Task"
         message={`Delete "${taskTitle}"?`}
         onConfirm={() => actorRef.send({ type: "CONFIRM_DELETE" })}
+        onCancel={() => actorRef.send({ type: "CANCEL" })}
+      />
+    );
+  }
+
+  // Delete attachment confirmation
+  if (mode === "confirmingDeleteAttachment") {
+    const attachmentId = attachmentIdPendingDelete;
+    const attachment = task?.attachments?.find((a) => a.id === attachmentId);
+    const name = attachment?.filename ?? "this attachment";
+    return (
+      <ConfirmationDialog
+        title="Delete Attachment"
+        message={`Delete "${name}"?`}
+        onConfirm={() => actorRef.send({ type: "CONFIRM_DELETE_ATTACHMENT" })}
         onCancel={() => actorRef.send({ type: "CANCEL" })}
       />
     );
