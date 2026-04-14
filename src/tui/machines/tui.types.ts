@@ -124,6 +124,9 @@ export interface TuiContext {
   paletteFilter: string;
   paletteSelectedIndex: number;
 
+  // Command mode (Vim-like `:w`) state
+  commandText: string;
+
   // Search state
   searchQuery: string;
 
@@ -164,6 +167,7 @@ export type TuiEvent =
   | { type: "QUIT" }
   // Mode transitions
   | { type: "OPEN_COMMAND_PALETTE" }
+  | { type: "OPEN_COMMAND_MODE" }
   | { type: "OPEN_HELP" }
   | { type: "START_SEARCH" }
   | { type: "START_CREATE_TASK" }
@@ -199,6 +203,8 @@ export type TuiEvent =
   | { type: "CONFIRM_DURATION" }
   | { type: "UPDATE_PROJECT_NAME"; value: string }
   | { type: "UPDATE_PALETTE_FILTER"; value: string }
+  | { type: "UPDATE_COMMAND_TEXT"; value: string }
+  | { type: "SUBMIT_COMMAND" }
   | { type: "UPDATE_SEARCH_QUERY"; value: string }
   | { type: "PALETTE_UP" }
   | { type: "PALETTE_DOWN"; max: number }
@@ -376,6 +382,7 @@ export type UiMode =
   | "list"
   | "detail"
   | "commandPalette"
+  | "commandMode"
   | "help"
   | "searching"
   | "creatingTask"

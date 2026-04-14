@@ -44,6 +44,7 @@ function createTestContext(overrides: Partial<TuiContext> = {}): TuiContext {
     lastSelectedTaskId: null,
     paletteFilter: "",
     paletteSelectedIndex: 0,
+    commandText: "",
     searchQuery: "",
     currentEditingMode: null,
     error: null,

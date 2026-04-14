@@ -105,10 +105,21 @@ export function KeyboardHandler(): React.ReactElement | null {
       return;
     }
 
+    // Command mode - `:` key (Vim-like)
+    if (input === ":" && !isEditing && mode !== "commandMode") {
+      logDispatch("OPEN_COMMAND_MODE", mode, keyStr);
+      actorRef.send({ type: "OPEN_COMMAND_MODE" });
+      return;
+    }
+
     // Mode-specific handlers for editing/overlay modes
     switch (mode) {
       case "commandPalette":
         // Command palette input is handled by CommandPalette component directly
+        return;
+
+      case "commandMode":
+        // Command mode input is handled by CommandInput component directly
         return;
 
       case "creatingTask":

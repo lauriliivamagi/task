@@ -1446,3 +1446,145 @@ Deno.test({
     );
   },
 });
+
+Deno.test({
+  name: "TUI Machine - Command Mode (`:w`)",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  fn: async (t) => {
+    await t.step(
+      "OPEN_COMMAND_MODE enters commandMode with cleared context",
+      async () => {
+        const actor = createTestActor();
+        actor.start();
+
+        await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+        actor.send({ type: "OPEN_COMMAND_MODE" });
+
+        const snapshot = actor.getSnapshot();
+        assertEquals(snapshot.matches({ ui: "commandMode" }), true);
+        assertEquals(snapshot.context.commandText, "");
+        assertEquals(snapshot.context.error, null);
+
+        actor.stop();
+      },
+    );
+
+    await t.step("UPDATE_COMMAND_TEXT updates commandText", async () => {
+      const actor = createTestActor();
+      actor.start();
+
+      await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+      actor.send({ type: "OPEN_COMMAND_MODE" });
+      actor.send({ type: "UPDATE_COMMAND_TEXT", value: "w" });
+
+      assertEquals(actor.getSnapshot().context.commandText, "w");
+
+      actor.stop();
+    });
+
+    await t.step(
+      "SUBMIT_COMMAND with 'w' triggers sync push and returns to normal",
+      async () => {
+        const actor = createTestActor();
+        actor.start();
+
+        await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+        actor.send({ type: "OPEN_COMMAND_MODE" });
+        actor.send({ type: "UPDATE_COMMAND_TEXT", value: "w" });
+        actor.send({ type: "SUBMIT_COMMAND" });
+
+        // UI should have exited commandMode
+        assertEquals(
+          actor.getSnapshot().matches({ ui: "commandMode" }),
+          false,
+        );
+        // Data region should enter syncingPush (raised SYNC_PUSH)
+        await waitForState(
+          actor,
+          (state) => state.matches({ data: "syncingPush" }),
+        );
+        assertEquals(actor.getSnapshot().context.commandText, "");
+
+        actor.stop();
+      },
+    );
+
+    await t.step(
+      "SUBMIT_COMMAND with unknown text stays in commandMode and sets error",
+      async () => {
+        const actor = createTestActor();
+        actor.start();
+
+        await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+        actor.send({ type: "OPEN_COMMAND_MODE" });
+        actor.send({ type: "UPDATE_COMMAND_TEXT", value: "foo" });
+        actor.send({ type: "SUBMIT_COMMAND" });
+
+        const snapshot = actor.getSnapshot();
+        assertEquals(snapshot.matches({ ui: "commandMode" }), true);
+        assertEquals(
+          snapshot.context.error,
+          "Not an editor command: foo",
+        );
+        assertEquals(snapshot.context.commandText, "");
+
+        actor.stop();
+      },
+    );
+
+    await t.step(
+      "SUBMIT_COMMAND with empty text is a no-op (stays, no error)",
+      async () => {
+        const actor = createTestActor();
+        actor.start();
+
+        await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+        actor.send({ type: "OPEN_COMMAND_MODE" });
+        actor.send({ type: "SUBMIT_COMMAND" });
+
+        const snapshot = actor.getSnapshot();
+        assertEquals(snapshot.matches({ ui: "commandMode" }), true);
+        assertEquals(snapshot.context.error, null);
+
+        actor.stop();
+      },
+    );
+
+    await t.step(
+      "CANCEL from commandMode returns to previous focus and clears state",
+      async () => {
+        const actor = createTestActor();
+        actor.start();
+
+        await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+        // Start in detail to verify history restoration
+        actor.send({ type: "TAB" });
+        assertEquals(
+          actor.getSnapshot().matches({ ui: { normal: "detail" } }),
+          true,
+        );
+
+        actor.send({ type: "OPEN_COMMAND_MODE" });
+        actor.send({ type: "UPDATE_COMMAND_TEXT", value: "foo" });
+        actor.send({ type: "CANCEL" });
+
+        const snapshot = actor.getSnapshot();
+        assertEquals(
+          snapshot.matches({ ui: { normal: "detail" } }),
+          true,
+        );
+        assertEquals(snapshot.context.commandText, "");
+        assertEquals(snapshot.context.error, null);
+
+        actor.stop();
+      },
+    );
+  },
+});

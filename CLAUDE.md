@@ -551,22 +551,23 @@ operations (API calls, file ops).
 
 **List View:**
 
-| Key       | Action             |
-| --------- | ------------------ |
-| `j/k`     | Move up/down       |
-| `n`       | New task           |
-| `o`       | New subtask        |
-| `e`       | Edit title         |
-| `x`       | Toggle done        |
-| `p`       | Toggle in-progress |
-| `y`       | Yank to clipboard  |
-| `w`       | Start work         |
-| `-`       | Delete task        |
-| `Shift+J` | Move task down     |
-| `Shift+K` | Move task up       |
-| `Shift+R` | Refresh            |
-| `/`       | Search             |
-| `Tab`     | Switch to detail   |
+| Key       | Action                                  |
+| --------- | --------------------------------------- |
+| `j/k`     | Move up/down                            |
+| `n`       | New task                                |
+| `o`       | New subtask                             |
+| `e`       | Edit title                              |
+| `x`       | Toggle done                             |
+| `p`       | Toggle in-progress                      |
+| `y`       | Yank to clipboard                       |
+| `w`       | Start work                              |
+| `-`       | Delete task                             |
+| `Shift+J` | Move task down                          |
+| `Shift+K` | Move task up                            |
+| `Shift+R` | Refresh                                 |
+| `/`       | Search                                  |
+| `:`       | Vim-like command mode (`:w` = Git sync) |
+| `Tab`     | Switch to detail                        |
 
 **Detail View:**
 

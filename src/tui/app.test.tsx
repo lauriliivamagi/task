@@ -1533,3 +1533,37 @@ Deno.test({
     cleanup();
   },
 });
+
+// === Command Mode Tests ===
+
+Deno.test({
+  name: "TUI E2E - ':foo' shows invalid-command error, Escape cancels",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  fn: async () => {
+    const { lastFrame, stdin, unmount } = renderApp();
+
+    await waitForText(lastFrame, "Buy groceries", { timeout: 3000 });
+
+    // Open command mode
+    stdin.write(":");
+    await delay(200);
+
+    // Enter an unknown command (delay per char to let ink-text-input keep up)
+    await typeText(stdin, "foo", 50);
+    await delay(100);
+    stdin.write(KEYS.ENTER);
+    await waitForText(lastFrame, "Not an editor command: foo", {
+      timeout: 1000,
+    });
+
+    // Escape returns to list
+    stdin.write(KEYS.ESCAPE);
+    await delay(100);
+    const doneFrame = stripAnsi(lastFrame() ?? "");
+    assertEquals(doneFrame.includes("Not an editor command"), false);
+
+    unmount();
+    cleanup();
+  },
+});

@@ -28,6 +28,9 @@ Or with a custom message:
 task sync push -m "Added project tasks"
 ```
 
+From inside the TUI, press `:` to open a Vim-like command prompt, then type
+`w` and hit Enter to commit and push without leaving the app.
+
 ## Pull changes
 
 ```bash

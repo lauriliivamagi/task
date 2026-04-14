@@ -38,6 +38,24 @@ import { formatDateTimeForEditing } from "../../shared/date-parser.ts";
 import { assertDefined } from "../../shared/assert.ts";
 import { openPath as defaultOpenPath } from "../../shared/open.ts";
 
+// === Command-mode parsing ===
+
+export type ParsedCommand =
+  | { kind: "sync" }
+  | { kind: "empty" }
+  | { kind: "unknown"; raw: string };
+
+export function parseCommand(text: string): ParsedCommand {
+  const trimmed = text.trim();
+  if (trimmed === "") return { kind: "empty" };
+  switch (trimmed) {
+    case "w":
+      return { kind: "sync" };
+    default:
+      return { kind: "unknown", raw: trimmed };
+  }
+}
+
 // === Machine Setup ===
 
 export const tuiMachine = setup({
@@ -73,6 +91,10 @@ export const tuiMachine = setup({
       paletteFilter: "",
       paletteSelectedIndex: 0,
     }),
+    clearCommandState: assign({
+      commandText: "",
+      error: null,
+    }),
     selectFirstTask: assign({
       selectedIndex: 0,
     }),
@@ -104,6 +126,7 @@ export const tuiMachine = setup({
     lastSelectedTaskId: input.lastSelectedTaskId ?? null,
     paletteFilter: "",
     paletteSelectedIndex: 0,
+    commandText: "",
     searchQuery: "",
     currentEditingMode: null,
     error: null,
@@ -698,6 +721,10 @@ export const tuiMachine = setup({
               target: "commandPalette",
               actions: "clearPaletteState",
             },
+            OPEN_COMMAND_MODE: {
+              target: "commandMode",
+              actions: "clearCommandState",
+            },
             OPEN_HELP: "help",
             START_CREATE_TASK: "creatingTask",
             START_SEARCH: "searching",
@@ -879,6 +906,48 @@ export const tuiMachine = setup({
               },
             },
             hist: { type: "history" },
+          },
+        },
+
+        commandMode: {
+          entry: "clearCommandState",
+          on: {
+            CANCEL: {
+              target: "normal.hist",
+              actions: "clearCommandState",
+            },
+            UPDATE_COMMAND_TEXT: {
+              actions: assign({
+                commandText: ({ event }) => event.value,
+                error: null,
+              }),
+            },
+            SUBMIT_COMMAND: [
+              {
+                guard: ({ context }) =>
+                  parseCommand(context.commandText).kind === "sync",
+                target: "normal.hist",
+                actions: [
+                  "clearCommandState",
+                  raise({ type: "SYNC_PUSH" }),
+                ],
+              },
+              {
+                guard: ({ context }) =>
+                  parseCommand(context.commandText).kind === "empty",
+                actions: "clearCommandState",
+              },
+              {
+                actions: assign({
+                  error: ({ context }) => {
+                    const parsed = parseCommand(context.commandText);
+                    const raw = parsed.kind === "unknown" ? parsed.raw : "";
+                    return `Not an editor command: ${raw}`;
+                  },
+                  commandText: "",
+                }),
+              },
+            ],
           },
         },
 

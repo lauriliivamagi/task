@@ -19,6 +19,7 @@ Complete list of keyboard shortcuts for the TUI.
 | `Shift+K` | Move task up in list            |
 | `Shift+R` | Refresh tasks                   |
 | `/`       | Open search                     |
+| `:`       | Open Vim-like command prompt    |
 | `-`       | Delete task (with confirmation) |
 | `Tab`     | Switch to detail view           |
 | `Enter`   | View task details               |
@@ -55,6 +56,19 @@ Complete list of keyboard shortcuts for the TUI.
 | -------- | -------------- |
 | `Enter`  | Execute search |
 | `Escape` | Cancel search  |
+
+## Command Mode
+
+Vim-like command prompt, opened with `:` from list or detail view.
+
+| Command | Action                      |
+| ------- | --------------------------- |
+| `:w`    | Commit and push Git sync    |
+
+| Key      | Action          |
+| -------- | --------------- |
+| `Enter`  | Run command     |
+| `Escape` | Cancel          |
 
 ## Input Mode
 

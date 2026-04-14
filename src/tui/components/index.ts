@@ -3,6 +3,7 @@
  */
 
 export { AttachmentPicker } from "./AttachmentPicker.tsx";
+export { CommandInput } from "./CommandInput.tsx";
 export { CommandPalette } from "./CommandPalette.tsx";
 export { CreateTaskInput } from "./CreateTaskInput.tsx";
 export { Help } from "./Help.tsx";

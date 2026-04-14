@@ -21,6 +21,7 @@ import { exitTui, registerInkInstance } from "./exit.ts";
 import { APP_VERSION } from "../shared/version.ts";
 import {
   AttachmentPicker,
+  CommandInput,
   CommandPalette,
   CreateTaskInput,
   DatabasePicker,
@@ -213,6 +214,7 @@ function MainLayout(): React.ReactElement {
   const isSearching = useTuiSelector(selectIsSearching);
   const mode = useTuiSelector(selectUiMode);
   const isEditingTitleInList = mode === "editingTitleInList";
+  const isCommandMode = mode === "commandMode";
   const searchQuery = useTuiSelector((state) => state.context.searchQuery);
   const selectedTask = useTuiSelector((state) => state.context.selectedTask);
 
@@ -263,6 +265,7 @@ function MainLayout(): React.ReactElement {
                   )}
                 </Box>
                 {isSearching && <SearchInput />}
+                {isCommandMode && <CommandInput />}
                 {isCreatingTask && <CreateTaskInput />}
                 {isEditingTitleInList && <EditTitleInput />}
                 <TaskList {...taskListProps} />
@@ -318,6 +321,7 @@ function MainLayout(): React.ReactElement {
             )}
           </Box>
           {isSearching && <SearchInput />}
+          {isCommandMode && <CommandInput />}
           {isCreatingTask && <CreateTaskInput />}
           {isEditingTitleInList && <EditTitleInput />}
           <TaskList {...taskListProps} />

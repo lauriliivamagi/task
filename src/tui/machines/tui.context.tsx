@@ -48,7 +48,8 @@ export const selectIsEditing = (state: TuiSnapshot) =>
   state.matches({ ui: "submittingTask" }) ||
   state.matches({ ui: "searching" }) ||
   state.matches({ ui: "editingTitleInList" }) ||
-  state.matches({ ui: "submittingTitleInList" });
+  state.matches({ ui: "submittingTitleInList" }) ||
+  state.matches({ ui: "commandMode" });
 
 export const selectFocus = (state: TuiSnapshot): "list" | "detail" => {
   if (
@@ -73,6 +74,7 @@ export const selectUiMode = (state: TuiSnapshot) => {
   }
 
   if (state.matches({ ui: "commandPalette" })) return "commandPalette";
+  if (state.matches({ ui: "commandMode" })) return "commandMode";
   if (state.matches({ ui: "help" })) return "help";
   if (state.matches({ ui: "searching" })) return "searching";
   if (state.matches({ ui: "creatingTask" })) return "creatingTask";
