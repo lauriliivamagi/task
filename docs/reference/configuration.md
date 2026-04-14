@@ -64,11 +64,11 @@ Set via `task db use <name>`.
 
 **Template entry fields:**
 
-| Field         | Required | Description                          |
-| ------------- | -------- | ------------------------------------ |
-| `name`        | Yes      | Display name in the template picker  |
-| `path`        | Yes      | Absolute path to template directory  |
-| `description` | No       | Description shown in picker          |
+| Field         | Required | Description                         |
+| ------------- | -------- | ----------------------------------- |
+| `name`        | Yes      | Display name in the template picker |
+| `path`        | Yes      | Absolute path to template directory |
+| `description` | No       | Description shown in picker         |
 
 See [How to Use Workspace Templates](../how-to/workspace-templates.md) for
 details.

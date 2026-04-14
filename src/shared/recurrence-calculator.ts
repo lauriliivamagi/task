@@ -34,7 +34,9 @@ function formatDateTime(date: Date): string {
   const instant = Temporal.Instant.fromEpochMilliseconds(date.getTime());
   const utc = instant.toZonedDateTimeISO("UTC");
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${utc.year}-${pad(utc.month)}-${pad(utc.day)}T${pad(utc.hour)}:${pad(utc.minute)}:${pad(utc.second)}Z`;
+  return `${utc.year}-${pad(utc.month)}-${pad(utc.day)}T${pad(utc.hour)}:${
+    pad(utc.minute)
+  }:${pad(utc.second)}Z`;
 }
 
 /**
@@ -175,7 +177,9 @@ function calculateMonthly(baseDate: Date, interval: number): string {
   const utc = instant.toZonedDateTimeISO("UTC");
   const next = utc.add({ months: interval });
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${next.year}-${pad(next.month)}-${pad(next.day)}T${pad(next.hour)}:${pad(next.minute)}:${pad(next.second)}Z`;
+  return `${next.year}-${pad(next.month)}-${pad(next.day)}T${pad(next.hour)}:${
+    pad(next.minute)
+  }:${pad(next.second)}Z`;
 }
 
 /**
@@ -201,9 +205,16 @@ function calculateMonthlyDay(
     day = Math.min(dayOfMonth, targetMonth.daysInMonth);
   }
 
-  const result = targetMonth.with({ day, hour: base.hour, minute: base.minute, second: base.second });
+  const result = targetMonth.with({
+    day,
+    hour: base.hour,
+    minute: base.minute,
+    second: base.second,
+  });
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${result.year}-${pad(result.month)}-${pad(result.day)}T${pad(result.hour)}:${pad(result.minute)}:${pad(result.second)}Z`;
+  return `${result.year}-${pad(result.month)}-${pad(result.day)}T${
+    pad(result.hour)
+  }:${pad(result.minute)}:${pad(result.second)}Z`;
 }
 
 /**
@@ -272,7 +283,9 @@ function calculateYearly(baseDate: Date, interval: number): string {
   const utc = instant.toZonedDateTimeISO("UTC");
   const next = utc.add({ years: interval });
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${next.year}-${pad(next.month)}-${pad(next.day)}T${pad(next.hour)}:${pad(next.minute)}:${pad(next.second)}Z`;
+  return `${next.year}-${pad(next.month)}-${pad(next.day)}T${pad(next.hour)}:${
+    pad(next.minute)
+  }:${pad(next.second)}Z`;
 }
 
 /**
@@ -299,5 +312,7 @@ function formatWithBaseTime(date: Date, baseDate: Date): string {
   });
 
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${combined.year}-${pad(combined.month)}-${pad(combined.day)}T${pad(combined.hour)}:${pad(combined.minute)}:${pad(combined.second)}Z`;
+  return `${combined.year}-${pad(combined.month)}-${pad(combined.day)}T${
+    pad(combined.hour)
+  }:${pad(combined.minute)}:${pad(combined.second)}Z`;
 }

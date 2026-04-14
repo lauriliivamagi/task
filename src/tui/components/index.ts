@@ -2,6 +2,7 @@
  * Component exports
  */
 
+export { AttachmentPicker } from "./AttachmentPicker.tsx";
 export { CommandPalette } from "./CommandPalette.tsx";
 export { CreateTaskInput } from "./CreateTaskInput.tsx";
 export { Help } from "./Help.tsx";

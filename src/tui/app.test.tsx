@@ -67,6 +67,7 @@ const TEST_KEYBINDINGS: KeybindingsConfig = {
     "t": "editTags",
     "r": "editRecurrence",
     "a": "addAttachment",
+    "O": "openAttachment",
     "D": "editDuration",
   },
   global: {
@@ -83,7 +84,11 @@ const TEST_KEYBINDINGS: KeybindingsConfig = {
  * Initializes keybindings with explicit test configuration.
  */
 function renderApp(
-  options: { client?: MockTaskClient; keybindings?: KeybindingsConfig } = {},
+  options: {
+    client?: MockTaskClient;
+    keybindings?: KeybindingsConfig;
+    openPath?: (path: string) => void;
+  } = {},
 ): ReturnType<typeof render> & { client: MockTaskClient } {
   // Initialize keybindings with test config (or custom config for specific tests)
   initKeybindings(options.keybindings ?? TEST_KEYBINDINGS);
@@ -91,7 +96,14 @@ function renderApp(
   const client = options.client ?? new MockTaskClient();
   const fs = new MemoryFS();
   const stateFile = "/test/tui-state.json";
-  const result = render(<App client={client} fs={fs} stateFile={stateFile} />);
+  const result = render(
+    <App
+      client={client}
+      fs={fs}
+      stateFile={stateFile}
+      openPath={options.openPath}
+    />,
+  );
   return { ...result, client };
 }
 
@@ -1380,6 +1392,143 @@ Deno.test({
     await delay(300);
 
     // Test completed successfully
+    unmount();
+    cleanup();
+  },
+});
+
+// === Open Attachment Tests ===
+
+Deno.test({
+  name: "TUI E2E - 'O' with one attachment opens it directly",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  fn: async () => {
+    const client = new MockTaskClient();
+    // Seed one attachment on the first task
+    await client.addAttachment(1, "/tmp/only.txt");
+
+    const opened: string[] = [];
+    const { lastFrame, stdin, unmount } = renderApp({
+      client,
+      openPath: (p) => opened.push(p),
+    });
+
+    await waitForText(lastFrame, "Buy groceries", { timeout: 3000 });
+
+    // Enter detail view
+    stdin.write(KEYS.TAB);
+    await delay(150);
+
+    // Press O to open the attachment
+    stdin.write("O");
+    await delay(150);
+
+    assertEquals(opened, ["/tmp/only.txt"]);
+
+    unmount();
+    cleanup();
+  },
+});
+
+Deno.test({
+  name: "TUI E2E - 'O' with multiple attachments opens picker",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  fn: async () => {
+    const client = new MockTaskClient();
+    await client.addAttachment(1, "/tmp/first.txt");
+    await client.addAttachment(1, "/tmp/second.pdf");
+
+    const opened: string[] = [];
+    const { lastFrame, stdin, unmount } = renderApp({
+      client,
+      openPath: (p) => opened.push(p),
+    });
+
+    await waitForText(lastFrame, "Buy groceries", { timeout: 3000 });
+
+    stdin.write(KEYS.TAB);
+    await delay(150);
+
+    stdin.write("O");
+    await waitForText(lastFrame, "Open Attachment", { timeout: 2000 });
+
+    const pickerFrame = stripAnsi(lastFrame() ?? "");
+    assertEquals(pickerFrame.includes("first.txt"), true);
+    assertEquals(pickerFrame.includes("second.pdf"), true);
+
+    // Navigate to second attachment and select it
+    stdin.write("j");
+    await delay(100);
+    stdin.write(KEYS.ENTER);
+    await delay(150);
+
+    assertEquals(opened, ["/tmp/second.pdf"]);
+    // Picker should be gone
+    const afterFrame = stripAnsi(lastFrame() ?? "");
+    assertEquals(afterFrame.includes("Open Attachment"), false);
+
+    unmount();
+    cleanup();
+  },
+});
+
+Deno.test({
+  name: "TUI E2E - 'O' with zero attachments is a no-op",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  fn: async () => {
+    const opened: string[] = [];
+    const { lastFrame, stdin, unmount } = renderApp({
+      openPath: (p) => opened.push(p),
+    });
+
+    await waitForText(lastFrame, "Buy groceries", { timeout: 3000 });
+
+    stdin.write(KEYS.TAB);
+    await delay(150);
+
+    stdin.write("O");
+    await delay(150);
+
+    assertEquals(opened, []);
+
+    unmount();
+    cleanup();
+  },
+});
+
+Deno.test({
+  name: "TUI E2E - Escape cancels attachment picker",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  fn: async () => {
+    const client = new MockTaskClient();
+    await client.addAttachment(1, "/tmp/a.txt");
+    await client.addAttachment(1, "/tmp/b.txt");
+
+    const opened: string[] = [];
+    const { lastFrame, stdin, unmount } = renderApp({
+      client,
+      openPath: (p) => opened.push(p),
+    });
+
+    await waitForText(lastFrame, "Buy groceries", { timeout: 3000 });
+
+    stdin.write(KEYS.TAB);
+    await delay(150);
+
+    stdin.write("O");
+    await waitForText(lastFrame, "Open Attachment", { timeout: 2000 });
+
+    stdin.write(KEYS.ESCAPE);
+    await delay(150);
+
+    assertEquals(opened, []);
+    const afterFrame = stripAnsi(lastFrame() ?? "");
+    assertEquals(afterFrame.includes("Open Attachment"), false);
+
     unmount();
     cleanup();
   },

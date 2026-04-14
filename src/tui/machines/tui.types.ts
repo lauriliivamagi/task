@@ -81,6 +81,8 @@ export interface TuiMachineInput {
   fs?: FileSystem;
   /** Optional path to state file (defaults to database dir) */
   stateFile?: string;
+  /** Optional opener for attachments (defaults to OS default via xdg-open/open/start) */
+  openPath?: (path: string) => void;
 }
 
 // === Machine Context ===
@@ -135,6 +137,9 @@ export interface TuiContext {
   // Optional filesystem for TUI state persistence (defaults to real FS)
   fs?: FileSystem;
   stateFile?: string;
+
+  // Injected OS-level file opener (allows stubbing in tests)
+  openPath: (path: string) => void;
 }
 
 // === Machine Events ===
@@ -209,6 +214,10 @@ export type TuiEvent =
   // Template picking
   | { type: "SELECT_TEMPLATE"; templateName: string | null }
   | { type: "CANCEL_TEMPLATE_PICKER" }
+  // Attachment opening
+  | { type: "OPEN_ATTACHMENT" }
+  | { type: "SELECT_ATTACHMENT"; attachmentId: number }
+  | { type: "CANCEL_ATTACHMENT_PICKER" }
   // Database switching
   | { type: "SHOW_DB_PICKER" }
   | { type: "CANCEL_DB_PICKER" }
@@ -363,6 +372,7 @@ export type UiMode =
   | "changingRecurrence"
   | "changingDuration"
   | "addingAttachment"
+  | "pickingAttachment"
   | "pickingTemplate"
   | "creatingWorkspace"
   | "pickingDatabase"

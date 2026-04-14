@@ -82,6 +82,7 @@ export const selectUiMode = (state: TuiSnapshot) => {
     return "editingTitleInList";
   }
   if (state.matches({ ui: "pickingTemplate" })) return "pickingTemplate";
+  if (state.matches({ ui: "pickingAttachment" })) return "pickingAttachment";
   if (state.matches({ ui: "creatingWorkspace" })) return "creatingWorkspace";
   if (state.matches({ ui: "pickingDatabase" })) return "pickingDatabase";
   if (state.matches({ ui: "switchingDatabase" })) return "switchingDatabase";

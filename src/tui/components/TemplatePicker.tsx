@@ -121,7 +121,8 @@ export function TemplatePicker(): React.ReactElement {
             </Text>
             {tmpl.description && idx === selectedIndex && (
               <Text color={theme.colors.muted}>
-                {"    "}{tmpl.description}
+                {"    "}
+                {tmpl.description}
               </Text>
             )}
           </Box>

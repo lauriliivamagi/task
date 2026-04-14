@@ -20,6 +20,7 @@ import { initKeybindings } from "../shared/keybindings.ts";
 import { exitTui, registerInkInstance } from "./exit.ts";
 import { APP_VERSION } from "../shared/version.ts";
 import {
+  AttachmentPicker,
   CommandPalette,
   CreateTaskInput,
   DatabasePicker,
@@ -425,6 +426,16 @@ function TemplatePickerView(): React.ReactElement {
   );
 }
 
+// === Attachment Picker View ===
+
+function AttachmentPickerView(): React.ReactElement {
+  return (
+    <Box flexGrow={1} justifyContent="center" alignItems="center">
+      <AttachmentPicker />
+    </Box>
+  );
+}
+
 // === Overlay Edit Modes ===
 const OVERLAY_MODES = [
   "changingStatus",
@@ -471,6 +482,9 @@ function TuiContent(): React.ReactElement {
   // Check if we're picking a template
   const isPickingTemplate = mode === "pickingTemplate";
 
+  // Check if we're picking an attachment to open
+  const isPickingAttachment = mode === "pickingAttachment";
+
   // Determine header mode
   const headerMode: HeaderMode = isCommandPaletteOpen
     ? "commandPalette"
@@ -511,6 +525,8 @@ function TuiContent(): React.ReactElement {
           ? <DatabasePickerView />
           : isPickingTemplate
           ? <TemplatePickerView />
+          : isPickingAttachment
+          ? <AttachmentPickerView />
           : showLoading
           ? <LoadingView />
           : (
@@ -541,12 +557,12 @@ function TuiContent(): React.ReactElement {
 type AppProps = TuiMachineInput;
 
 export function App(
-  { client, lastSelectedTaskId, fs, stateFile }: AppProps,
+  { client, lastSelectedTaskId, fs, stateFile, openPath }: AppProps,
 ): React.ReactElement {
   return (
     <TuiMachineContext.Provider
       options={{
-        input: { client, lastSelectedTaskId, fs, stateFile },
+        input: { client, lastSelectedTaskId, fs, stateFile, openPath },
       }}
     >
       <TuiContent />

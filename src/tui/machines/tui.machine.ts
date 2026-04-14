@@ -36,6 +36,7 @@ import type { DetailEditingMode } from "./child-machines/detail-editing.types.ts
 import { saveLastSelectedTaskId } from "../tui-state.ts";
 import { formatDateTimeForEditing } from "../../shared/date-parser.ts";
 import { assertDefined } from "../../shared/assert.ts";
+import { openPath as defaultOpenPath } from "../../shared/open.ts";
 
 // === Machine Setup ===
 
@@ -109,6 +110,7 @@ export const tuiMachine = setup({
     client: input.client,
     fs: input.fs,
     stateFile: input.stateFile,
+    openPath: input.openPath ?? defaultOpenPath,
   }),
 
   // Global event handlers (available in all states)
@@ -842,6 +844,19 @@ export const tuiMachine = setup({
                       context.selectedTask?.title ?? "",
                   }),
                 },
+                OPEN_ATTACHMENT: [
+                  {
+                    target: "#tui.ui.pickingAttachment",
+                    guard: "hasMultipleAttachments",
+                  },
+                  {
+                    guard: "hasExactlyOneAttachment",
+                    actions: ({ context }) => {
+                      const path = context.selectedTask?.attachments?.[0]?.path;
+                      if (path) context.openPath(path);
+                    },
+                  },
+                ],
               },
             },
             hist: { type: "history" },
@@ -1016,6 +1031,23 @@ export const tuiMachine = setup({
               actions: assign({
                 selectedTemplateName: ({ event }) => event.templateName,
               }),
+            },
+          },
+        },
+
+        pickingAttachment: {
+          on: {
+            CANCEL_ATTACHMENT_PICKER: {
+              target: "normal.hist",
+            },
+            SELECT_ATTACHMENT: {
+              target: "normal.hist",
+              actions: ({ context, event }) => {
+                const attachment = context.selectedTask?.attachments?.find(
+                  (a) => a.id === event.attachmentId,
+                );
+                if (attachment?.path) context.openPath(attachment.path);
+              },
             },
           },
         },

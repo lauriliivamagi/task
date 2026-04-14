@@ -47,6 +47,7 @@ function createTestContext(overrides: Partial<TuiContext> = {}): TuiContext {
     currentEditingMode: null,
     error: null,
     status: null,
+    openPath: () => {},
     ...overrides,
   };
 }

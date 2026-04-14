@@ -39,9 +39,9 @@ function formatLocalDate(utcString: string): string {
   const instant = Temporal.Instant.from(normalized);
   const local = instant.toZonedDateTimeISO(Temporal.Now.timeZoneId());
   const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${local.year}-${pad(local.month)}-${
-    pad(local.day)
-  } ${pad(local.hour)}:${pad(local.minute)}`;
+  return `${local.year}-${pad(local.month)}-${pad(local.day)} ${
+    pad(local.hour)
+  }:${pad(local.minute)}`;
 }
 
 /** Split text into lines respecting terminal width and newlines */
@@ -573,7 +573,7 @@ export function TaskDetail(
               ? "k/j:select Enter:read | "
               : ""}
             e:title s:status p:priority o:project u:due D:dur t:tags r:recur
-            a:attach c:comment d:desc
+            a:attach O:open-att c:comment d:desc
           </Text>
         </Box>
       )}

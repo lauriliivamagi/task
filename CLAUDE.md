@@ -467,7 +467,11 @@ external repo templates configured in `config.json`.
   "work": {
     "templates": [
       { "name": "Knowledge Work", "path": "/home/user/git/knowledge-template" },
-      { "name": "Software", "path": "/home/user/git/software-template", "description": "For dev tasks" }
+      {
+        "name": "Software",
+        "path": "/home/user/git/software-template",
+        "description": "For dev tasks"
+      }
     ]
   }
 }
@@ -480,8 +484,8 @@ external repo templates configured in `config.json`.
 - 2+ external templates: shows TUI picker with j/k navigation
 
 **External templates** fully own the workspace structure. Files are copied
-(excluding `.git/`), `{{task.*}}` variables are substituted in text files,
-and only `.task-ref.json` is added. No README.md/CLAUDE.md/input/output are
+(excluding `.git/`), `{{task.*}}` variables are substituted in text files, and
+only `.task-ref.json` is added. No README.md/CLAUDE.md/input/output are
 generated.
 
 **Built-in templates** (from `~/.task-cli/workspace-templates/`) generate
@@ -578,6 +582,7 @@ operations (API calls, file ops).
 | `t`       | Edit tags               |
 | `r`       | Edit recurrence         |
 | `a`       | Add attachment          |
+| `Shift+O` | Open attachment         |
 | `Shift+G` | Sync to Google Calendar |
 | `Tab`     | Switch to list          |
 

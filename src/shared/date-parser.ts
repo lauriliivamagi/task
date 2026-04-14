@@ -62,7 +62,14 @@ export function parseNaturalDate(
 
     // Create local datetime from components and convert to UTC
     // Temporal uses 1-indexed months (same as chrono), no footgun
-    const pdt = new Temporal.PlainDateTime(year, month, day, hour, minute, second);
+    const pdt = new Temporal.PlainDateTime(
+      year,
+      month,
+      day,
+      hour,
+      minute,
+      second,
+    );
     const zdt = pdt.toZonedDateTime(Temporal.Now.timeZoneId());
     return zdt.toInstant().toString();
   } catch {
@@ -174,7 +181,9 @@ export function formatDateTimeForEditing(utcString: string): string {
     const local = instant.toZonedDateTimeISO(Temporal.Now.timeZoneId());
 
     const pad = (n: number) => String(n).padStart(2, "0");
-    return `${local.year}-${pad(local.month)}-${pad(local.day)} ${pad(local.hour)}:${pad(local.minute)}`;
+    return `${local.year}-${pad(local.month)}-${pad(local.day)} ${
+      pad(local.hour)
+    }:${pad(local.minute)}`;
   } catch {
     return "";
   }

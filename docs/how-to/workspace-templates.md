@@ -88,15 +88,15 @@ When an external template is selected:
 
 These variables are replaced in text files during workspace creation:
 
-| Variable             | Example value       |
-| -------------------- | ------------------- |
-| `{{task.id}}`        | `42`                |
-| `{{task.title}}`     | `Fix auth bug`      |
-| `{{task.status}}`    | `todo`              |
-| `{{task.priority}}`  | `1`                 |
-| `{{task.due_date}}`  | `2026-03-01`        |
-| `{{task.project}}`   | `Backend`           |
-| `{{task.slug}}`      | `42-fix-auth-bug`   |
+| Variable             | Example value                    |
+| -------------------- | -------------------------------- |
+| `{{task.id}}`        | `42`                             |
+| `{{task.title}}`     | `Fix auth bug`                   |
+| `{{task.status}}`    | `todo`                           |
+| `{{task.priority}}`  | `1`                              |
+| `{{task.due_date}}`  | `2026-03-01`                     |
+| `{{task.project}}`   | `Backend`                        |
+| `{{task.slug}}`      | `42-fix-auth-bug`                |
 | `{{task.workspace}}` | `/home/user/git/42-fix-auth-bug` |
 
 ## Create a template
@@ -120,8 +120,7 @@ You can use template variables in any text file. For example, in `README.md`:
 ```markdown
 # {{task.title}}
 
-Task ID: {{task.id}}
-Project: {{task.project}}
+Task ID: {{task.id}} Project: {{task.project}}
 ```
 
 Binary files (images, compiled assets) are copied as-is without substitution.
