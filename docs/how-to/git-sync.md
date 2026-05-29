@@ -1,3 +1,16 @@
+---
+type: how-to-guide
+domain: complicated
+audience: practitioner
+stability: tactical
+authority:
+  provenance: institutional
+  verifiability: executable
+  evidence: moderate
+  currency: undated
+epistemic-layer: method
+---
+
 # How to Sync Tasks Across Devices
 
 Use Git to synchronize your Task data across multiple machines.

@@ -1,3 +1,16 @@
+---
+type: how-to-guide
+domain: clear
+audience: practitioner
+stability: tactical
+authority:
+  provenance: institutional
+  verifiability: executable
+  evidence: moderate
+  currency: undated
+epistemic-layer: method
+---
+
 # How to Use the Claude Code Skill
 
 Use Task through natural language in Claude Code.

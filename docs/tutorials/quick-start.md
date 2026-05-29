@@ -1,3 +1,16 @@
+---
+type: tutorial
+domain: clear
+audience: practitioner
+stability: tactical
+authority:
+  provenance: institutional
+  verifiability: executable
+  evidence: moderate
+  currency: undated
+epistemic-layer: practice
+---
+
 # Quick Start
 
 Get up and running with Task in 5 minutes.

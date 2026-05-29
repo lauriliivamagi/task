@@ -1,3 +1,16 @@
+---
+type: explanation
+domain: complicated
+audience: practitioner
+stability: structural
+authority:
+  provenance: institutional
+  verifiability: auditable
+  evidence: moderate
+  currency: undated
+epistemic-layer: theory
+---
+
 # How Semantic Search Works
 
 Understanding the technology behind Task's "search by meaning" feature.

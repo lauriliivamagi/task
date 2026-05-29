@@ -1,3 +1,16 @@
+---
+type: how-to-guide
+domain: clear
+audience: practitioner
+stability: tactical
+authority:
+  provenance: institutional
+  verifiability: testable
+  evidence: moderate
+  currency: undated
+epistemic-layer: method
+---
+
 # How to Customize TUI Keyboard Shortcuts
 
 Change keyboard shortcuts in the terminal UI to match your workflow.

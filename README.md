@@ -217,6 +217,10 @@ Solve specific problems:
 - [How to Manage Multiple Databases](docs/how-to/multiple-databases.md)
 - [How to Sync Across Devices](docs/how-to/git-sync.md)
 - [How to Customize TUI Shortcuts](docs/how-to/customize-tui.md)
+- [How to Run Task as a Server](docs/how-to/run-as-server.md) — operate the HTTP
+  API
+- [How to Monitor and Troubleshoot Task](docs/how-to/observability-and-troubleshooting.md)
+  — logs, tracing, recovery
 
 ### Reference
 
@@ -238,10 +242,13 @@ Understand the design:
   local
 - [How Semantic Search Works](docs/explanation/semantic-search.md) — embeddings
   and vectors
+- [Architecture Decisions](docs/explanation/adr/) — ADRs recording key design
+  choices
 
 ### For Developers
 
 - [Developer Guide](CLAUDE.md) — architecture, testing, and contributing
+- [Contributing](CONTRIBUTING.md) — setup, testing workflow, and releases
 
 ## License
 

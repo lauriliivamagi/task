@@ -1,3 +1,16 @@
+---
+type: tutorial
+domain: complicated
+audience: practitioner
+stability: tactical
+authority:
+  provenance: institutional
+  verifiability: executable
+  evidence: moderate
+  currency: undated
+epistemic-layer: practice
+---
+
 # AI Integration Tutorial
 
 Learn how to use Task with AI coding assistants like Claude Code.

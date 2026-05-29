@@ -1,3 +1,16 @@
+---
+type: explanation
+domain: complicated
+audience: practitioner
+stability: structural
+authority:
+  provenance: institutional
+  verifiability: auditable
+  evidence: moderate
+  currency: undated
+epistemic-layer: method
+---
+
 # Architecture Decision Records
 
 This directory records significant architecture decisions for Task using

@@ -1,3 +1,16 @@
+---
+type: how-to-guide
+domain: complicated
+audience: practitioner
+stability: tactical
+authority:
+  provenance: institutional
+  verifiability: executable
+  evidence: moderate
+  currency: undated
+epistemic-layer: method
+---
+
 # How to Sync Tasks to Google Calendar
 
 Push tasks to Google Calendar as events. Changes sync one-way (tasks to

@@ -1,3 +1,16 @@
+---
+type: reference
+domain: clear
+audience: practitioner
+stability: tactical
+authority:
+  provenance: institutional
+  verifiability: auditable
+  evidence: moderate
+  currency: undated
+epistemic-layer: practice
+---
+
 # Keyboard Shortcuts Reference
 
 Complete list of keyboard shortcuts for the TUI.

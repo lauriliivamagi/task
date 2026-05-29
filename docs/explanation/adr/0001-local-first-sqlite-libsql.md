@@ -1,3 +1,16 @@
+---
+type: explanation
+domain: complicated
+audience: decision-maker
+stability: foundational
+authority:
+  provenance: institutional
+  verifiability: auditable
+  evidence: moderate
+  currency: dated
+epistemic-layer: heuristic
+---
+
 # 0001. Local-first storage on SQLite (libsql/Turso)
 
 - Status: Accepted

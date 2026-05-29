@@ -1,3 +1,16 @@
+---
+type: reference
+domain: clear
+audience: practitioner
+stability: structural
+authority:
+  provenance: institutional
+  verifiability: auditable
+  evidence: moderate
+  currency: undated
+epistemic-layer: practice
+---
+
 # Configuration Reference
 
 Task stores configuration in `~/.task-cli/config.json`.

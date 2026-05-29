@@ -1,3 +1,16 @@
+---
+type: reference
+domain: clear
+audience: practitioner
+stability: structural
+authority:
+  provenance: institutional
+  verifiability: executable
+  evidence: moderate
+  currency: undated
+epistemic-layer: practice
+---
+
 # CLI Reference
 
 Complete command reference for Task. For a quick start, see the

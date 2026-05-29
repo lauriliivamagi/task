@@ -1,3 +1,16 @@
+---
+type: explanation
+domain: complicated
+audience: decision-maker
+stability: foundational
+authority:
+  provenance: institutional
+  verifiability: asserted
+  evidence: moderate
+  currency: undated
+epistemic-layer: framework
+---
+
 # Local-First Design
 
 Why Task stores your data locally and what that means for you.

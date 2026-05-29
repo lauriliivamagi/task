@@ -1,3 +1,16 @@
+---
+type: explanation
+domain: complicated
+audience: decision-maker
+stability: structural
+authority:
+  provenance: institutional
+  verifiability: auditable
+  evidence: moderate
+  currency: dated
+epistemic-layer: heuristic
+---
+
 # 0002. One API, many interfaces: in-process Hono server with a TypeScript SDK
 
 - Status: Accepted

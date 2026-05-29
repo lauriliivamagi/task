@@ -1,3 +1,16 @@
+---
+type: explanation
+domain: complicated
+audience: decision-maker
+stability: structural
+authority:
+  provenance: institutional
+  verifiability: auditable
+  evidence: moderate
+  currency: dated
+epistemic-layer: heuristic
+---
+
 # NNNN. Short title of the decision
 
 - Status: Proposed | Accepted | Superseded by ADR-XXXX | Deprecated

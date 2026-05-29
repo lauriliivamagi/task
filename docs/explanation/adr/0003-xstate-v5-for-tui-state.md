@@ -1,3 +1,16 @@
+---
+type: explanation
+domain: complicated
+audience: decision-maker
+stability: structural
+authority:
+  provenance: institutional
+  verifiability: auditable
+  evidence: moderate
+  currency: dated
+epistemic-layer: heuristic
+---
+
 # 0003. XState v5 for TUI state
 
 - Status: Accepted

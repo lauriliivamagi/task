@@ -1,3 +1,16 @@
+---
+type: explanation
+domain: complicated
+audience: practitioner
+stability: structural
+authority:
+  provenance: institutional
+  verifiability: auditable
+  evidence: moderate
+  currency: undated
+epistemic-layer: framework
+---
+
 # Architecture
 
 How Task is designed and why.

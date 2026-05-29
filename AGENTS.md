@@ -1,3 +1,16 @@
+---
+type: reference
+domain: clear
+audience: machine
+stability: structural
+authority:
+  provenance: institutional
+  verifiability: asserted
+  evidence: weak
+  currency: undated
+epistemic-layer: practice
+---
+
 # AGENTS.md
 
 This project's guidance for AI coding agents and human contributors lives in

@@ -1,3 +1,16 @@
+---
+type: how-to-guide
+domain: complicated
+audience: practitioner
+stability: tactical
+authority:
+  provenance: institutional
+  verifiability: testable
+  evidence: moderate
+  currency: undated
+epistemic-layer: method
+---
+
 # How to Use Workspace Templates
 
 Configure external repository templates to customize workspace structure when

@@ -1,3 +1,16 @@
+---
+type: how-to-guide
+domain: complicated
+audience: practitioner
+stability: structural
+authority:
+  provenance: institutional
+  verifiability: executable
+  evidence: moderate
+  currency: undated
+epistemic-layer: method
+---
+
 # Contributing to Task
 
 Thanks for contributing! This guide covers local setup, the development loop,

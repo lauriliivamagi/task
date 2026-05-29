@@ -1,3 +1,16 @@
+---
+type: reference
+domain: complicated
+audience: practitioner
+stability: structural
+authority:
+  provenance: institutional
+  verifiability: executable
+  evidence: moderate
+  currency: undated
+epistemic-layer: practice
+---
+
 # HTTP API Reference
 
 Task exposes a REST API when running the server with `task serve`.
