@@ -305,7 +305,7 @@ export async function pushChanges(): Promise<GitResult> {
 const AUTO_SYNC_TIMEOUT_MS = 10000;
 
 /** Debounce timer for auto-commit */
-let commitTimer: number | null = null;
+let commitTimer: ReturnType<typeof setTimeout> | null = null;
 
 /** Debounce delay for auto-commit (30 seconds) */
 const AUTO_COMMIT_DEBOUNCE_MS = 30000;
@@ -504,7 +504,7 @@ export function scheduleAutoCommit(): void {
     clearTimeout(commitTimer);
   }
 
-  commitTimer = setTimeout(async () => {
+  const timer = setTimeout(async () => {
     commitTimer = null;
 
     if (!await isAutoSyncEnabled()) {
@@ -525,10 +525,11 @@ export function scheduleAutoCommit(): void {
       logger.warn(`Auto-commit failed: ${result.stderr.trim()}`, "sync");
     }
   }, AUTO_COMMIT_DEBOUNCE_MS);
+  commitTimer = timer;
 
   // Unref the timer so it doesn't prevent the process from exiting.
   // This is important for CLI commands that complete quickly.
-  Deno.unrefTimer(commitTimer);
+  Deno.unrefTimer(timer);
 }
 
 /**

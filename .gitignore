@@ -1,5 +1,6 @@
 # Claude Code local settings
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 coverage/
 coverage_profile/
 node_modules/

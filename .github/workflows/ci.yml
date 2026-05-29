@@ -13,8 +13,29 @@ jobs:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.7.9
+          deno-version: v2.8.1
       - name: Security audit
         run: deno audit
         env:
           DENO_UNSTABLE_AUDIT: "1"
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.8.1
+      - name: Configure git identity (for sync tests)
+        run: |
+          git config --global user.email "ci@task-cli.local"
+          git config --global user.name "task-cli CI"
+      - name: Cache dependencies
+        # Populate the shared Deno cache once so the many `deno run`
+        # subprocesses spawned by the CLI/sync tests reuse it instead of
+        # each re-downloading the dependency tree.
+        run: deno install
+      - name: Run tests
+        # `deno task test` type-checks and runs the suite against an
+        # in-memory SQLite DB (TASK_CLI_DB_URL=:memory:).
+        run: deno task test
