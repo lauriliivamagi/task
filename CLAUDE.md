@@ -15,8 +15,13 @@ deno task start         # Run CLI: deno run -A src/main.ts <command>
 deno task serve         # Start HTTP server
 deno task tui           # Launch terminal UI
 deno task compile       # Build standalone binary (./task)
-deno check src/main.ts  # Type check
+deno check src/main.ts  # Type check entry point
 deno fmt                # Format code
+deno task ci            # All quality gates: fmt:check + lint + check:all + test + unused
+deno task check:all     # Full-codebase type check (src + tests)
+deno task lint          # Lint        |  deno task fmt:check  # Check formatting
+deno task unused        # Dead-code finder (scripts/find_unused.ts)
+deno task hooks:install # Install git hooks via core.hooksPath (run once after clone)
 ```
 
 Run a single test:
@@ -152,7 +157,7 @@ src/
     ├── assert.ts              # TigerStyle assertions
     ├── limits.ts              # Constants for bounded operations
     ├── fs-abstraction.ts      # FileSystem interface
-    ├── date-parser.ts         # chrono-node + date-fns
+    ├── date-parser.ts         # chrono-node + Temporal
     ├── recurrence-parser.ts   # Parse "every Monday"
     ├── recurrence-calculator.ts # Calculate next due date
     ├── recurrence-handler.ts  # Create task on completion
@@ -450,7 +455,7 @@ and TypeScript types.
 **Date Handling:**
 
 - `chrono-node` for natural language parsing
-- `date-fns` for manipulation
+- `Temporal` API for date manipulation
 - UTC storage, local display
 - ISO 8601 with full datetime precision
 
@@ -754,10 +759,19 @@ pre-push hook enforces this.
 - **MINOR** (0.1.0 → 0.2.0): New features, backward compatible
 - **MAJOR** (0.1.0 → 1.0.0): Breaking changes
 
-### Pre-Push Hook
+### Git Hooks
 
-Enforces version updates and plugin version sync. Ignores doc-only changes.
-Bypass: `git push --no-verify`
+Hooks are tracked in `hooks/` and installed via `core.hooksPath`. Run once after
+cloning:
+
+```bash
+deno task hooks:install
+```
+
+- **pre-commit** — `deno fmt --check` + `deno lint` (fast).
+- **pre-push** — enforces `deno.json` ↔ `.claude-plugin/plugin.json` version
+  sync; skips doc-only pushes. Bypass: `git push --no-verify`.
+- **prepare-commit-msg** — prepends an issue key from the branch name.
 
 ### Creating a Release
 

@@ -78,6 +78,9 @@ export interface ITaskClient {
 }
 
 // === Machine Input ===
+/** Reads a PNG image from the clipboard, or null if none. Injectable for tests. */
+export type ClipboardImageReader = () => Promise<Uint8Array | null>;
+
 export interface TuiMachineInput {
   client: ITaskClient;
   lastSelectedTaskId?: number | null;
@@ -87,6 +90,8 @@ export interface TuiMachineInput {
   stateFile?: string;
   /** Optional opener for attachments (defaults to OS default via xdg-open/open/start) */
   openPath?: (path: string) => void;
+  /** Optional clipboard image reader (defaults to the real OS clipboard) */
+  readImage?: ClipboardImageReader;
 }
 
 // === Machine Context ===
@@ -148,6 +153,9 @@ export interface TuiContext {
 
   // Injected OS-level file opener (allows stubbing in tests)
   openPath: (path: string) => void;
+
+  // Injected clipboard image reader (allows stubbing in tests)
+  readImage: ClipboardImageReader;
 }
 
 // === Machine Events ===
@@ -323,6 +331,7 @@ export interface AddAttachmentInput {
 export interface PasteImageAttachmentInput {
   client: ITaskClient;
   taskId: number;
+  readImage: ClipboardImageReader;
 }
 
 export interface LoadProjectsInput {

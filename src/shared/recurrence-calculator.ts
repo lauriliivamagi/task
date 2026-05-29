@@ -28,18 +28,6 @@ const JS_TO_RRULE_WEEKDAY: any[] = [
 ];
 
 /**
- * Format a Date as ISO datetime string in UTC using Temporal.
- */
-function formatDateTime(date: Date): string {
-  const instant = Temporal.Instant.fromEpochMilliseconds(date.getTime());
-  const utc = instant.toZonedDateTimeISO("UTC");
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${utc.year}-${pad(utc.month)}-${pad(utc.day)}T${pad(utc.hour)}:${
-    pad(utc.minute)
-  }:${pad(utc.second)}Z`;
-}
-
-/**
  * Parse an ISO date/datetime string into a Date object.
  * Handles both YYYY-MM-DD and YYYY-MM-DDTHH:MM:SSZ formats.
  */

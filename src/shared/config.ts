@@ -13,6 +13,8 @@ import {
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
+export type LogFormat = "json" | "pretty";
+
 export interface WorkspaceTemplate {
   name: string;
   path: string;
@@ -42,6 +44,8 @@ export interface GcalConfig {
 
 export interface Config {
   logLevel: LogLevel;
+  /** Log record format for the file sink: "json" (default) or "pretty". */
+  logFormat?: LogFormat;
   work: WorkConfig;
   sync?: SyncConfig;
   gcal?: GcalConfig;
@@ -72,6 +76,12 @@ const LOG_LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
 
 function isValidLogLevel(level: string): level is LogLevel {
   return LOG_LEVELS.includes(level as LogLevel);
+}
+
+const LOG_FORMATS: LogFormat[] = ["json", "pretty"];
+
+function isValidLogFormat(format: string): format is LogFormat {
+  return LOG_FORMATS.includes(format as LogFormat);
 }
 
 let cachedConfig: Config | null = null;
@@ -110,6 +120,10 @@ async function loadConfigFile(): Promise<Partial<Config>> {
 
     if (parsed.logLevel && isValidLogLevel(parsed.logLevel)) {
       config.logLevel = parsed.logLevel;
+    }
+
+    if (parsed.logFormat && isValidLogFormat(parsed.logFormat)) {
+      config.logFormat = parsed.logFormat;
     }
 
     // Parse work config
@@ -221,6 +235,9 @@ export async function getConfig(): Promise<Config> {
   if (fileConfig.logLevel) {
     config.logLevel = fileConfig.logLevel;
   }
+  if (fileConfig.logFormat) {
+    config.logFormat = fileConfig.logFormat;
+  }
   if (fileConfig.work) {
     config.work = { ...config.work, ...fileConfig.work };
   }
@@ -241,6 +258,11 @@ export async function getConfig(): Promise<Config> {
   const envLogLevel = Deno.env.get("TASK_CLI_LOG_LEVEL");
   if (envLogLevel && isValidLogLevel(envLogLevel)) {
     config.logLevel = envLogLevel;
+  }
+
+  const envLogFormat = Deno.env.get("TASK_CLI_LOG_FORMAT");
+  if (envLogFormat && isValidLogFormat(envLogFormat)) {
+    config.logFormat = envLogFormat;
   }
 
   // Work-related env overrides

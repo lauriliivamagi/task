@@ -58,7 +58,10 @@ Deno.test({
       await delay(20);
 
       const frame = stripAnsi(lastFrame() ?? "");
-      assert(frame.length > 0, "TUI should still be rendering after navigation");
+      assert(
+        frame.length > 0,
+        "TUI should still be rendering after navigation",
+      );
     } finally {
       unmount();
     }

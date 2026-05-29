@@ -50,6 +50,7 @@ function createTestContext(overrides: Partial<TuiContext> = {}): TuiContext {
     error: null,
     status: null,
     openPath: () => {},
+    readImage: () => Promise.resolve(null),
     ...overrides,
   };
 }

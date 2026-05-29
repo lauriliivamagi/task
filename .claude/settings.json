@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(deno task:*)",
+      "Bash(deno test:*)",
+      "Bash(deno check:*)",
+      "Bash(deno fmt:*)",
+      "Bash(deno lint:*)",
+      "Bash(deno run:*)",
+      "Bash(deno compile:*)",
+      "Bash(deno info:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ],
+    "deny": [
+      "Read(~/.ssh/**)",
+      "Read(**/secrets.json)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR}\"/.claude/hooks/block-dangerous-git.sh"
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR}\"/.claude/hooks/enforce-deno.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -19,6 +19,24 @@ jobs:
         env:
           DENO_UNSTABLE_AUDIT: "1"
 
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.8.1
+      - name: Cache dependencies
+        run: deno install
+      - name: Check formatting
+        run: deno fmt --check
+      - name: Lint
+        run: deno lint
+      - name: Type-check (full codebase)
+        run: deno task check:all
+      - name: Dead-code check
+        run: deno task unused
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -35,7 +53,15 @@ jobs:
         # subprocesses spawned by the CLI/sync tests reuse it instead of
         # each re-downloading the dependency tree.
         run: deno install
-      - name: Run tests
-        # `deno task test` type-checks and runs the suite against an
-        # in-memory SQLite DB (TASK_CLI_DB_URL=:memory:).
-        run: deno task test
+      - name: Run tests with coverage
+        # `deno task test:cov` type-checks and runs the suite against an
+        # in-memory SQLite DB (TASK_CLI_DB_URL=:memory:), writing a coverage
+        # profile to coverage/.
+        run: deno task test:cov
+      - name: Coverage summary
+        run: deno task coverage
+      - name: Enforce coverage threshold (soft)
+        # Report-only until a baseline is established; raise COVERAGE_MIN later.
+        run: deno task coverage:check
+        env:
+          COVERAGE_MIN: "0"

@@ -18,6 +18,7 @@ import {
   migrateEmbeddings,
 } from "../db/client.ts";
 import { logger } from "../shared/logger.ts";
+import { withSpan } from "../shared/timing.ts";
 import { assertDefined, assertPositive } from "../shared/assert.ts";
 
 export class EmbeddingService {
@@ -91,7 +92,13 @@ export class EmbeddingService {
       );
       assertDefined(this.db, "Database must be initialized", "embeddings");
 
-      const embedding = await this.provider.embed(text);
+      const provider = this.provider;
+      const embedding = await withSpan(
+        "embeddings.embed",
+        () => provider.embed(text),
+        "embeddings",
+        { taskId },
+      );
       const vectorStr = embeddingToVector(embedding);
 
       await this.db.execute({
@@ -272,7 +279,13 @@ export class EmbeddingService {
           "Provider must be initialized",
           "embeddings",
         );
-        const embeddings = await this.provider.embedBatch(texts);
+        const provider = this.provider;
+        const embeddings = await withSpan(
+          "embeddings.embedBatch",
+          () => provider.embedBatch(texts),
+          "embeddings",
+          { batchSize: texts.length },
+        );
 
         // Store each embedding
         for (let j = 0; j < batch.length; j++) {

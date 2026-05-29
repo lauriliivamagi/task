@@ -61,14 +61,14 @@ Complete list of keyboard shortcuts for the TUI.
 
 Vim-like command prompt, opened with `:` from list or detail view.
 
-| Command | Action                      |
-| ------- | --------------------------- |
-| `:w`    | Commit and push Git sync    |
+| Command | Action                   |
+| ------- | ------------------------ |
+| `:w`    | Commit and push Git sync |
 
-| Key      | Action          |
-| -------- | --------------- |
-| `Enter`  | Run command     |
-| `Escape` | Cancel          |
+| Key      | Action      |
+| -------- | ----------- |
+| `Enter`  | Run command |
+| `Escape` | Cancel      |
 
 ## Input Mode
 

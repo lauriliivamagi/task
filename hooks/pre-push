@@ -1,0 +1,57 @@
+#!/bin/sh
+#
+# Pre-push: enforce that deno.json "version" === .claude-plugin/plugin.json
+# "version" (they must be bumped together — see CLAUDE.md "Versioning").
+# Skips the check when the push contains only documentation (*.md) changes.
+# Bypass entirely with: git push --no-verify
+#
+# git feeds the pushed refs on stdin, one per line:
+#   <local ref> <local sha> <remote ref> <remote sha>
+set -eu
+
+zero="0000000000000000000000000000000000000000"
+changed=""
+have_range=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -z "${local_sha:-}" ] && continue
+  [ "$local_sha" = "$zero" ] && continue # branch deletion — nothing to check
+  if [ "${remote_sha:-$zero}" = "$zero" ]; then
+    # New branch on the remote: diff against the default branch if findable.
+    base="$(git merge-base "$local_sha" origin/master 2>/dev/null || true)"
+    if [ -n "$base" ]; then
+      changed="$changed
+$(git diff --name-only "$base" "$local_sha" 2>/dev/null || true)"
+      have_range=1
+    fi
+  else
+    changed="$changed
+$(git diff --name-only "$remote_sha" "$local_sha" 2>/dev/null || true)"
+    have_range=1
+  fi
+done
+
+# Doc-only optimization: if we resolved a file list and it is all *.md, skip.
+# (The sync check passes on doc-only pushes anyway; this just avoids the noise.)
+if [ "$have_range" = "1" ]; then
+  nondoc="$(printf '%s\n' "$changed" | sed '/^$/d' | grep -v '\.md$' || true)"
+  if [ -z "$nondoc" ]; then
+    echo "pre-push: doc-only changes, skipping version sync check."
+    exit 0
+  fi
+fi
+
+# Enforce deno.json <-> plugin.json version sync (robust JSON parse via deno).
+deno run --allow-read - <<'EOF'
+import deno from "./deno.json" with { type: "json" };
+import plugin from "./.claude-plugin/plugin.json" with { type: "json" };
+if (deno.version !== plugin.version) {
+  console.error(
+    `pre-push: version mismatch — deno.json=${deno.version} ` +
+      `.claude-plugin/plugin.json=${plugin.version}. ` +
+      `Update both to match, then commit. Bypass with: git push --no-verify`,
+  );
+  Deno.exit(1);
+}
+console.log(`pre-push: version sync OK (${deno.version}).`);
+EOF

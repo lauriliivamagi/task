@@ -4,7 +4,7 @@
  * Tests state transitions, guards, actors, and edge cases.
  */
 
-import { assertEquals, assertNotEquals } from "@std/assert";
+import { assertEquals, assertExists, assertNotEquals } from "@std/assert";
 import { createActor, waitFor } from "xstate";
 import { tuiMachine } from "./tui.machine.ts";
 import { MockTaskClient } from "../mock_client.ts";
@@ -13,12 +13,17 @@ import { MemoryFS } from "../../shared/fs-abstraction.ts";
 // === Test Utilities ===
 
 function createTestActor(
-  overrides?: Partial<{ client: MockTaskClient }>,
+  overrides?: Partial<{
+    client: MockTaskClient;
+    readImage: () => Promise<Uint8Array | null>;
+  }>,
 ): ReturnType<typeof createActor<typeof tuiMachine>> {
   const client = overrides?.client ?? new MockTaskClient();
   const fs = new MemoryFS();
   const stateFile = "/test/tui-state.json";
-  return createActor(tuiMachine, { input: { client, fs, stateFile } });
+  return createActor(tuiMachine, {
+    input: { client, fs, stateFile, readImage: overrides?.readImage },
+  });
 }
 
 async function waitForState(
@@ -1067,7 +1072,11 @@ Deno.test({
     await t.step(
       "PASTE_IMAGE_ATTACHMENT without clipboard image sets error and returns to normal",
       async () => {
-        const actor = createTestActor();
+        // Inject a clipboard reader that reports no image, so this test is
+        // deterministic regardless of the real OS clipboard state.
+        const actor = createTestActor({
+          readImage: () => Promise.resolve(null),
+        });
         actor.start();
         await waitForState(actor, (state) => state.matches({ data: "ready" }));
 
@@ -1082,14 +1091,14 @@ Deno.test({
         actor.send({ type: "TAB" });
         actor.send({ type: "PASTE_IMAGE_ATTACHMENT" });
 
-        // Actor fails (no image on clipboard in test env) → returns to normal
+        // Actor fails (injected reader returns no image) → returns to normal
         await waitForState(
           actor,
           (state) => state.matches({ ui: "normal" }),
         );
         assertEquals(
-          typeof actor.getSnapshot().context.error,
-          "string",
+          actor.getSnapshot().context.error,
+          "No image on clipboard",
         );
 
         actor.stop();
@@ -1108,7 +1117,8 @@ Deno.test({
 
         const target = actor.getSnapshot().context.tasks.find((t) =>
           t.id === 1
-        )!;
+        );
+        assertExists(target);
         actor.send({ type: "HIGHLIGHT_TASK", task: target });
         await waitForState(actor, (state) => state.matches({ data: "ready" }));
 
@@ -1148,7 +1158,8 @@ Deno.test({
 
         const target = actor.getSnapshot().context.tasks.find((t) =>
           t.id === 1
-        )!;
+        );
+        assertExists(target);
         actor.send({ type: "HIGHLIGHT_TASK", task: target });
         await waitForState(actor, (state) => state.matches({ data: "ready" }));
 
@@ -1197,7 +1208,8 @@ Deno.test({
 
         const target = actor.getSnapshot().context.tasks.find((t) =>
           t.id === 1
-        )!;
+        );
+        assertExists(target);
         actor.send({ type: "HIGHLIGHT_TASK", task: target });
         await waitForState(actor, (state) => state.matches({ data: "ready" }));
 

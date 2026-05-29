@@ -1,0 +1,35 @@
+# Optional local OpenTelemetry stack for tracing the long-running server.
+#
+# Deno 2.4+ has stable, native OpenTelemetry: running with `OTEL_DENO=1`
+# auto-exports traces (per Deno.serve request + outbound fetch), logs, and
+# metrics via OTLP to http://localhost:4318 — no app code or dependencies
+# required. This compose file runs Jaeger v2 to receive and visualise them.
+#
+# ── ALREADY RUNNING A JAEGER / OTLP COLLECTOR? ──────────────────────────────
+# If `docker ps` shows a collector on :4318 (e.g. a `jaegertracing/jaeger`
+# container), you do NOT need this file. Just run `deno task serve:otel` — its
+# traces flow into your existing collector. Open that collector's UI (Jaeger:
+# http://localhost:16686) and look for the service named "task". Do NOT run
+# `deno task otel:jaeger`, or it will clash on the published host ports.
+#
+# ── Otherwise, start your own ───────────────────────────────────────────────
+#   docker compose -f docker-compose.otel.yml up      # start Jaeger
+#   deno task serve:otel                               # run server with OTel on
+#   # open the Jaeger UI at: http://localhost:16686
+#
+# ── Run alongside another Jaeger (remap host ports to avoid a clash) ────────
+#   JAEGER_UI_PORT=16687 JAEGER_OTLP_HTTP_PORT=4328 JAEGER_OTLP_GRPC_PORT=4327 \
+#     docker compose -f docker-compose.otel.yml up
+#   # then point Deno's exporter at the remapped OTLP HTTP port:
+#   OTEL_DENO=1 OTEL_SERVICE_NAME=task \
+#     OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4328 deno task serve
+#
+# This is a development/diagnostics aid only — never required to run Task.
+services:
+  jaeger:
+    image: jaegertracing/jaeger:2.2.0
+    container_name: task-jaeger
+    ports:
+      - "${JAEGER_UI_PORT:-16686}:16686" # Jaeger UI
+      - "${JAEGER_OTLP_GRPC_PORT:-4317}:4317" # OTLP gRPC receiver
+      - "${JAEGER_OTLP_HTTP_PORT:-4318}:4318" # OTLP HTTP receiver (Deno default)

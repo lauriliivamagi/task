@@ -1,0 +1,11 @@
+#!/bin/sh
+#
+# Pre-commit: fast format + lint gate (no type-check/tests — keep commits snappy;
+# those run in CI and via `deno task ci`). Bypass with: git commit --no-verify
+set -eu
+
+echo "pre-commit: deno fmt --check"
+deno fmt --check
+
+echo "pre-commit: deno lint"
+deno lint

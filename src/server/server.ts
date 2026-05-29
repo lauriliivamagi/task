@@ -9,6 +9,7 @@ import { parseRoute } from "./routes/parse.ts";
 import { tagsRoute, taskTagsRoute } from "./routes/tags.ts";
 import { reportsRoute } from "./routes/reports.ts";
 import { gcalRoute } from "./routes/gcal.ts";
+import { observability } from "./middleware/observability.ts";
 import { initDb, migrateAllDatabases } from "../db/client.ts";
 import { logger } from "../shared/logger.ts";
 import { AssertionError } from "../shared/assert.ts";
@@ -22,6 +23,10 @@ import {
 const app = new Hono();
 
 // Middleware
+// Observability runs FIRST so its AsyncLocalStorage scope wraps the whole
+// pipeline (including the auto-commit scheduled below) and every log line in
+// the request is tagged with the request id.
+app.use("*", observability);
 app.use("*", cors());
 
 // Auto-commit middleware: schedule git commit after successful write operations

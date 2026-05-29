@@ -37,6 +37,7 @@ import { saveLastSelectedTaskId } from "../tui-state.ts";
 import { formatDateTimeForEditing } from "../../shared/date-parser.ts";
 import { assertDefined } from "../../shared/assert.ts";
 import { openPath as defaultOpenPath } from "../../shared/open.ts";
+import { readImageFromClipboard } from "../../shared/clipboard.ts";
 
 // === Command-mode parsing ===
 
@@ -135,6 +136,7 @@ export const tuiMachine = setup({
     fs: input.fs,
     stateFile: input.stateFile,
     openPath: input.openPath ?? defaultOpenPath,
+    readImage: input.readImage ?? readImageFromClipboard,
   }),
 
   // Global event handlers (available in all states)
@@ -1202,6 +1204,7 @@ export const tuiMachine = setup({
             input: ({ context }) => ({
               client: context.client,
               taskId: context.selectedTask?.id ?? 0,
+              readImage: context.readImage,
             }),
             onDone: {
               target: "normal.hist",

@@ -1,5 +1,5 @@
 {
-  "version": "1.8.3",
+  "version": "1.9.0",
   "publish": false,
   "lint": {
     "rules": {
@@ -16,11 +16,20 @@
   "tasks": {
     "start": "deno run -A src/main.ts",
     "serve": "deno run -A src/main.ts serve",
+    "serve:otel": "OTEL_DENO=1 OTEL_SERVICE_NAME=task deno run -A src/main.ts serve",
+    "otel:jaeger": "docker compose -f docker-compose.otel.yml up",
     "tui": "deno run -A src/main.ts tui",
     "test": "TASK_CLI_LOG_DISABLED=1 TASK_CLI_DB_URL=:memory: deno test -A",
     "test:cov": "rm -rf coverage && TASK_CLI_LOG_DISABLED=1 TASK_CLI_DB_URL=:memory: deno test -A --coverage=coverage",
     "coverage": "deno coverage coverage --exclude=\"^file:///tmp/\"",
-    "compile": "deno compile -A -o task src/main.ts"
+    "coverage:check": "deno run -A scripts/coverage_check.ts",
+    "compile": "deno compile -A -o task src/main.ts",
+    "fmt:check": "deno fmt --check",
+    "lint": "deno lint",
+    "check:all": "deno check \"src/**/*.ts\" \"src/**/*.tsx\" \"tests/**/*.ts\" \"tests/**/*.tsx\"",
+    "unused": "deno run -A scripts/find_unused.ts",
+    "hooks:install": "deno run -A scripts/install_hooks.ts",
+    "ci": "deno task fmt:check && deno task lint && deno task check:all && deno task test && deno task unused"
   },
   "compilerOptions": {
     "jsx": "react",

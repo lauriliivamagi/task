@@ -26,7 +26,6 @@ import type {
 } from "../child-machines/detail-editing.types.ts";
 import { parseRecurrence } from "../../../shared/recurrence-parser.ts";
 import { resolveDueDate } from "../../../shared/date-parser.ts";
-import { readImageFromClipboard } from "../../../shared/clipboard.ts";
 import { MAX_ATTACHMENT_SIZE } from "../../../shared/limits.ts";
 
 export const createTaskActor = fromPromise<{ id: number }, CreateTaskInput>(
@@ -122,7 +121,7 @@ export const pasteImageAttachmentActor = fromPromise<
   PasteImageAttachmentInput
 >(
   async ({ input }) => {
-    const bytes = await readImageFromClipboard();
+    const bytes = await input.readImage();
     if (!bytes || bytes.length === 0) {
       throw new Error("No image on clipboard");
     }
