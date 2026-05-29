@@ -3,7 +3,10 @@ import { join } from "@std/path";
 import {
   cancelPendingCommit,
   clearSyncConflict,
+  commitChanges,
   hasSyncConflict,
+  initGitRepo,
+  runGit,
 } from "../src/shared/sync.ts";
 
 const CLI_PATH = new URL("../src/main.ts", import.meta.url).pathname;
@@ -215,6 +218,61 @@ Deno.test("sync status shows dirty state after file change", async () => {
     assertEquals(result.code, 0);
     assertStringIncludes(result.stdout, "dirty");
   } finally {
+    await teardown(testDir);
+  }
+});
+
+Deno.test("commitChanges keeps embeddings.db out of git even with a stale .gitignore", async () => {
+  const testDir = `${TEST_DIR}-commit-gitignore`;
+  const originalHome = Deno.env.get("HOME");
+  Deno.env.set("HOME", testDir);
+  try {
+    const cfg = join(testDir, ".task-cli");
+    await Deno.mkdir(cfg, { recursive: true });
+
+    // Initialize the repo (writes a current .gitignore + initial commit).
+    await initGitRepo();
+
+    // Simulate a pre-v1.10.0 user: a stale .gitignore that predates the
+    // embeddings.db exclude. This is the state an existing user upgrades from.
+    await Deno.writeTextFile(
+      join(cfg, ".gitignore"),
+      "# Task - excluded from sync\nlogs/\nsecrets.json\n*.log\n",
+    );
+
+    // The v1.10.0 migration produces both files: a small data.db that SHOULD
+    // be backed up and a large, rebuildable embeddings.db that must NOT be.
+    await Deno.mkdir(join(cfg, "databases", "quire"), { recursive: true });
+    await Deno.writeTextFile(
+      join(cfg, "databases", "quire", "data.db"),
+      "task data",
+    );
+    await Deno.writeTextFile(
+      join(cfg, "databases", "quire", "embeddings.db"),
+      "x".repeat(4096),
+    );
+
+    // The automatic sync path commits via commitChanges() — no manual step.
+    const result = await commitChanges("auto-commit");
+    assertEquals(result.success, true);
+
+    const tracked = await runGit(["ls-files"]);
+    assertEquals(
+      tracked.stdout.includes("embeddings.db"),
+      false,
+      "embeddings.db must never be tracked",
+    );
+    assertStringIncludes(
+      tracked.stdout,
+      "databases/quire/data.db",
+      "data.db must still be backed up",
+    );
+  } finally {
+    if (originalHome) {
+      Deno.env.set("HOME", originalHome);
+    } else {
+      Deno.env.delete("HOME");
+    }
     await teardown(testDir);
   }
 });

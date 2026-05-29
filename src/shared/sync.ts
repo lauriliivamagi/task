@@ -264,6 +264,12 @@ export async function setRemote(
  * Commit all changes
  */
 export async function commitChanges(message?: string): Promise<GitResult> {
+  // Always refresh .gitignore before staging so the excludes (notably the
+  // large, rebuildable embeddings.db) are guaranteed current — including on
+  // the automatic auto-commit/auto-push paths, not just manual `sync push`.
+  // Without this, an existing user upgrading to v1.10.0 could auto-commit a
+  // freshly-created embeddings.db against a stale .gitignore and re-bloat.
+  await ensureGitignore();
   await runGit(["add", "-A"]);
   const commitMsg = message || `Sync: ${Temporal.Now.instant().toString()}`;
   return await runGit(["commit", "-m", commitMsg]);
