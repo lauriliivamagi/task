@@ -40,30 +40,36 @@ export const schema = `
 `;
 
 /**
- * Migration to add embedding column and vector index.
- * Uses Turso's native vector support with F32_BLOB type.
+ * Embeddings storage lives in a SEPARATE database file (attached as `emb`),
+ * not in data.db. This keeps data.db — the file synced via `task sync` — small
+ * and free of the large DiskANN vector index, which is a rebuildable artifact.
+ * Uses Turso/libsql native vector support with the F32_BLOB type.
+ *
+ * Tables use the indexed primary key as an alias for rowid, so vector_top_k's
+ * returned id maps directly back to task_id / comment_id.
  */
-export const embeddingMigration = `
-  -- Add embedding column if not exists (768 dimensions)
-  ALTER TABLE tasks ADD COLUMN embedding F32_BLOB(768);
+export const taskEmbeddingsTable = `
+  CREATE TABLE IF NOT EXISTS emb.task_embeddings (
+    task_id INTEGER PRIMARY KEY,
+    embedding F32_BLOB(768)
+  );
 `;
 
-export const embeddingIndexMigration = `
-  -- Create vector similarity index
-  CREATE INDEX IF NOT EXISTS tasks_embedding_idx ON tasks (
+export const taskEmbeddingsIndex = `
+  CREATE INDEX IF NOT EXISTS emb.task_embeddings_idx ON task_embeddings (
     libsql_vector_idx(embedding, 'metric=cosine')
   );
 `;
 
-/**
- * Migration to add embedding column to comments table.
- */
-export const commentEmbeddingMigration = `
-  ALTER TABLE comments ADD COLUMN embedding F32_BLOB(768);
+export const commentEmbeddingsTable = `
+  CREATE TABLE IF NOT EXISTS emb.comment_embeddings (
+    comment_id INTEGER PRIMARY KEY,
+    embedding F32_BLOB(768)
+  );
 `;
 
-export const commentEmbeddingIndexMigration = `
-  CREATE INDEX IF NOT EXISTS comments_embedding_idx ON comments (
+export const commentEmbeddingsIndex = `
+  CREATE INDEX IF NOT EXISTS emb.comment_embeddings_idx ON comment_embeddings (
     libsql_vector_idx(embedding, 'metric=cosine')
   );
 `;

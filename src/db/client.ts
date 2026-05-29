@@ -1,19 +1,19 @@
 import type { Client } from "@libsql/client/node";
 import { createClient } from "@libsql/client/node";
 import {
-  commentEmbeddingIndexMigration,
-  commentEmbeddingMigration,
+  commentEmbeddingsIndex,
+  commentEmbeddingsTable,
   completedAtMigration,
   contextMigration,
   durationMigration,
-  embeddingIndexMigration,
-  embeddingMigration,
   gcalEventMigration,
   gcalEventUrlMigration,
   orderMigration,
   recurrenceMigration,
   schema,
   tagsMigration,
+  taskEmbeddingsIndex,
+  taskEmbeddingsTable,
 } from "./schema.ts";
 import { ensureDir } from "@std/fs";
 import { join } from "@std/path";
@@ -57,6 +57,57 @@ export function getDbPath(name?: string): string {
  */
 export function getAttachmentsDir(name?: string): string {
   return join(getDbDir(name), "attachments");
+}
+
+/**
+ * Get the embeddings database file path for a specific database.
+ * Embeddings live in a separate file alongside data.db so the synced data.db
+ * stays small. This file is git-ignored by `task sync`.
+ */
+export function getEmbeddingsDbPath(name?: string): string {
+  return join(getDbDir(name), "embeddings.db");
+}
+
+/**
+ * Derive the embeddings DB target to ATTACH for a given main database URL.
+ * - ":memory:" (and empty) → a separate in-memory database
+ * - "file:/dir/data.db"    → "/dir/embeddings.db"
+ * - any other "/dir/x.db"  → "/dir/x.embeddings.db" (keeps test DBs isolated)
+ */
+export function embeddingsTargetFor(dbUrl: string): string {
+  if (dbUrl === ":memory:" || dbUrl === "") {
+    return ":memory:";
+  }
+  const path = dbUrl.startsWith("file:") ? dbUrl.slice("file:".length) : dbUrl;
+  if (path.endsWith("data.db")) {
+    return path.slice(0, -"data.db".length) + "embeddings.db";
+  }
+  return path.replace(/\.db$/, "") + ".embeddings.db";
+}
+
+/**
+ * Attach the embeddings database as the `emb` schema on a client connection.
+ * Idempotent: a re-attach on an already-attached connection is ignored.
+ */
+async function attachEmbeddingsDb(
+  client: Client,
+  dbUrl: string,
+): Promise<void> {
+  const target = embeddingsTargetFor(dbUrl).replace(/'/g, "''");
+  try {
+    await client.execute(`ATTACH DATABASE '${target}' AS emb;`);
+  } catch (error) {
+    const message = String(error);
+    // Already attached (cached client reuse) is expected and harmless.
+    if (
+      !message.includes("already in use") &&
+      !message.includes("already attached")
+    ) {
+      logger.warn("Could not attach embeddings database", "db", {
+        error: message.slice(0, 100),
+      });
+    }
+  }
 }
 
 // Cache client to avoid creating new connections (important for in-memory DBs)
@@ -112,6 +163,9 @@ export async function getDb(): Promise<Client> {
   // Enable foreign key enforcement (SQLite ignores FK constraints by default)
   await client.execute("PRAGMA foreign_keys = ON;");
 
+  // Attach the separate embeddings database as `emb`.
+  await attachEmbeddingsDb(client, dbUrl);
+
   // Cache the client
   cachedClient = client;
   cachedDbUrl = dbUrl;
@@ -141,64 +195,71 @@ async function columnExists(
   return result.rows.some((row) => row.name === column);
 }
 
-/** Run embedding migration (add column + index) */
-export async function migrateEmbeddings(): Promise<Client> {
-  const db = await getDb();
+/**
+ * Move a legacy in-data.db embedding column into the attached `emb` database,
+ * then drop the column and its vector index so data.db shrinks. No-op when the
+ * column was never added (fresh databases). Reclaims space with VACUUM only
+ * when a column was actually removed.
+ *
+ * `db` MUST have the `emb` database attached (see attachEmbeddingsDb).
+ */
+async function migrateLegacyEmbeddingColumns(db: Client): Promise<void> {
+  let dropped = false;
 
-  // Check if embedding column already exists
-  const hasEmbedding = await columnExists(db, "tasks", "embedding");
-
-  if (!hasEmbedding) {
-    try {
-      await db.execute(embeddingMigration);
-      logger.info("Added embedding column to tasks table", "db");
-    } catch (error) {
-      // Column might already exist (race condition)
-      if (!String(error).includes("duplicate column")) {
-        throw error;
-      }
-    }
+  if (await columnExists(db, "tasks", "embedding")) {
+    await db.execute(
+      `INSERT OR IGNORE INTO emb.task_embeddings (task_id, embedding)
+       SELECT id, embedding FROM tasks WHERE embedding IS NOT NULL`,
+    );
+    await db.execute("DROP INDEX IF EXISTS tasks_embedding_idx");
+    await db.execute("ALTER TABLE tasks DROP COLUMN embedding");
+    logger.info("Moved task embeddings out of data.db", "db");
+    dropped = true;
   }
 
-  // Create index (IF NOT EXISTS handles idempotency)
+  if (await columnExists(db, "comments", "embedding")) {
+    await db.execute(
+      `INSERT OR IGNORE INTO emb.comment_embeddings (comment_id, embedding)
+       SELECT id, embedding FROM comments WHERE embedding IS NOT NULL`,
+    );
+    await db.execute("DROP INDEX IF EXISTS comments_embedding_idx");
+    await db.execute("ALTER TABLE comments DROP COLUMN embedding");
+    logger.info("Moved comment embeddings out of data.db", "db");
+    dropped = true;
+  }
+
+  if (dropped) {
+    await db.execute("VACUUM");
+  }
+}
+
+/**
+ * Ensure embedding storage exists in the attached `emb` database and migrate
+ * any legacy embeddings out of data.db. `db` MUST have `emb` attached.
+ *
+ * Index creation is best-effort: it may fail where the libsql vector extension
+ * is unavailable, in which case storage still works (search just won't).
+ */
+export async function migrateEmbeddingStorageOn(db: Client): Promise<void> {
+  await db.execute(taskEmbeddingsTable);
+  await db.execute(commentEmbeddingsTable);
+
   try {
-    await db.execute(embeddingIndexMigration);
+    await db.execute(taskEmbeddingsIndex);
+    await db.execute(commentEmbeddingsIndex);
   } catch (error) {
-    // Index creation might fail if libsql doesn't support vectors
-    // This is expected in some environments (e.g., in-memory test DBs)
     logger.warn("Could not create vector index", "db", {
       error: String(error).slice(0, 100),
     });
   }
 
-  return db;
+  await migrateLegacyEmbeddingColumns(db);
 }
 
-/** Run comment embedding migration (add column + index) */
-export async function migrateCommentEmbeddings(): Promise<Client> {
+/** Run embedding storage migration on the active database. */
+export async function migrateEmbeddingStorage(): Promise<Client> {
   const db = await getDb();
-
-  const hasEmbedding = await columnExists(db, "comments", "embedding");
-
-  if (!hasEmbedding) {
-    try {
-      await db.execute(commentEmbeddingMigration);
-      logger.info("Added embedding column to comments table", "db");
-    } catch (error) {
-      if (!String(error).includes("duplicate column")) {
-        throw error;
-      }
-    }
-  }
-
-  try {
-    await db.execute(commentEmbeddingIndexMigration);
-  } catch (error) {
-    logger.warn("Could not create comment vector index", "db", {
-      error: String(error).slice(0, 100),
-    });
-  }
-
+  await migrateEmbeddingStorageOn(db);
   return db;
 }
 
@@ -511,9 +572,11 @@ export async function runAllMigrations(db: Client): Promise<void> {
   await migrateGcalEventIdOn(db);
   await migrateDurationOn(db);
 
-  // Note: Embedding migrations are intentionally excluded.
-  // They run on-demand when the embedding service initializes,
-  // as they require vector extension support which may not be available.
+  // Embedding storage migration: creates the attached `emb` tables and moves
+  // any legacy embeddings out of data.db. Safe to run everywhere — table
+  // creation and column removal don't need the vector extension, and index
+  // creation is best-effort. Requires `emb` to be attached on `db`.
+  await migrateEmbeddingStorageOn(db);
 }
 
 /**
@@ -530,6 +593,7 @@ export async function migrateAllDatabases(): Promise<void> {
     const client = createClient({ url: testDbUrl });
     try {
       await client.execute("PRAGMA foreign_keys = ON;");
+      await attachEmbeddingsDb(client, testDbUrl);
       await client.executeMultiple(schema);
       await runAllMigrations(client);
     } finally {
@@ -550,10 +614,13 @@ export async function migrateAllDatabases(): Promise<void> {
 
   for (const name of dbNames) {
     const dbPath = join(DATABASES_DIR, name, "data.db");
-    const client = createClient({ url: `file:${dbPath}` });
+    const dbUrl = `file:${dbPath}`;
+    const client = createClient({ url: dbUrl });
     try {
       // Enable foreign keys
       await client.execute("PRAGMA foreign_keys = ON;");
+      // Attach the separate embeddings database as `emb`
+      await attachEmbeddingsDb(client, dbUrl);
       // Create base schema (idempotent)
       await client.executeMultiple(schema);
       // Run all migrations

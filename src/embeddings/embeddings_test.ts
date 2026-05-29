@@ -15,7 +15,11 @@ import {
 } from "./provider.ts";
 import { createEmbeddingProvider } from "./index.ts";
 import { EmbeddingService } from "./service.ts";
-import { initDb, resetDbClient } from "../db/client.ts";
+import {
+  initDb,
+  migrateEmbeddingStorageOn,
+  resetDbClient,
+} from "../db/client.ts";
 
 /** Mock embedding provider for testing */
 class MockEmbeddingProvider implements EmbeddingProvider {
@@ -452,6 +456,98 @@ Deno.test("Comment Embedding Service", async (t) => {
         stats.comments.withoutEmbedding,
         stats.comments.total - stats.comments.withEmbedding,
       );
+    });
+  } finally {
+    Deno.env.delete("TASK_CLI_DB_URL");
+    resetDbClient();
+  }
+});
+
+Deno.test("Legacy in-data.db embeddings are migrated to the emb database", async (t) => {
+  resetDbClient();
+  Deno.env.set("TASK_CLI_DB_URL", ":memory:");
+
+  try {
+    const db = await initDb();
+
+    // Simulate the OLD on-disk layout: embedding column + vector index living
+    // inside data.db, with one embedded task.
+    await db.execute("ALTER TABLE tasks ADD COLUMN embedding F32_BLOB(768)");
+    await db.execute(
+      "CREATE INDEX tasks_embedding_idx ON tasks (libsql_vector_idx(embedding, 'metric=cosine'))",
+    );
+    await db.execute("INSERT INTO tasks (id, title) VALUES (1, 'legacy task')");
+    const legacyVector = "[" +
+      Array.from({ length: 768 }, (_, i) => (i === 0 ? 1 : 0)).join(",") +
+      "]";
+    await db.execute({
+      sql: "UPDATE tasks SET embedding = vector(?) WHERE id = 1",
+      args: [legacyVector],
+    });
+
+    // Run the storage migration.
+    await migrateEmbeddingStorageOn(db);
+
+    await t.step("embedding column is dropped from data.db", async () => {
+      const info = await db.execute("PRAGMA table_info(tasks)");
+      assertEquals(info.rows.some((r) => r.name === "embedding"), false);
+    });
+
+    await t.step("legacy vector is preserved in the emb database", async () => {
+      const r = await db.execute(
+        "SELECT COUNT(*) AS n FROM emb.task_embeddings WHERE task_id = 1",
+      );
+      assertEquals(Number(r.rows[0].n), 1);
+    });
+
+    await t.step("the old in-data.db vector index is gone", async () => {
+      const r = await db.execute(
+        "SELECT name FROM sqlite_master WHERE name = 'tasks_embedding_idx'",
+      );
+      assertEquals(r.rows.length, 0);
+    });
+  } finally {
+    Deno.env.delete("TASK_CLI_DB_URL");
+    resetDbClient();
+  }
+});
+
+Deno.test("Embeddings live in a separate attached database", async (t) => {
+  resetDbClient();
+  Deno.env.set("TASK_CLI_DB_URL", ":memory:");
+
+  try {
+    const db = await initDb();
+    await db.execute(
+      "INSERT INTO tasks (id, title) VALUES (1, 'buy fresh milk')",
+    );
+    await db.execute(
+      "INSERT INTO tasks (id, title) VALUES (2, 'repair the car engine')",
+    );
+
+    const service = new EmbeddingService(
+      undefined,
+      new MockEmbeddingProvider(),
+    );
+    await service.embedTask(1, "buy fresh milk");
+    await service.embedTask(2, "repair the car engine");
+
+    await t.step("semantic search finds the matching task", async () => {
+      const results = await service.searchSimilar("buy fresh milk", 1);
+      assertEquals(results[0], 1);
+    });
+
+    await t.step("data.db tasks table has no embedding column", async () => {
+      const info = await db.execute("PRAGMA table_info(tasks)");
+      const hasEmbedding = info.rows.some((r) => r.name === "embedding");
+      assertEquals(hasEmbedding, false);
+    });
+
+    await t.step("vectors are stored in the attached emb schema", async () => {
+      const r = await db.execute(
+        "SELECT COUNT(*) AS n FROM emb.task_embeddings",
+      );
+      assertEquals(Number(r.rows[0].n), 2);
     });
   } finally {
     Deno.env.delete("TASK_CLI_DB_URL");

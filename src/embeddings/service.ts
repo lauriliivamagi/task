@@ -12,11 +12,7 @@ import {
   embeddingToVector,
   getEmbeddingConfig,
 } from "./index.ts";
-import {
-  getDb,
-  migrateCommentEmbeddings,
-  migrateEmbeddings,
-} from "../db/client.ts";
+import { getDb, migrateEmbeddingStorage } from "../db/client.ts";
 import { logger } from "../shared/logger.ts";
 import { withSpan } from "../shared/timing.ts";
 import { assertDefined, assertPositive } from "../shared/assert.ts";
@@ -26,7 +22,15 @@ export class EmbeddingService {
   private db: Client | null = null;
   private initialized = false;
 
-  constructor(private config?: EmbeddingConfig) {}
+  /**
+   * @param config Optional explicit config (otherwise read from env).
+   * @param providerOverride Optional provider instance, used instead of
+   *   constructing one from config. Primarily for tests.
+   */
+  constructor(
+    private config?: EmbeddingConfig,
+    private providerOverride?: EmbeddingProvider,
+  ) {}
 
   /** Initialize the service (lazy) */
   private async init(): Promise<boolean> {
@@ -36,22 +40,25 @@ export class EmbeddingService {
 
     this.initialized = true;
 
-    // Get config from env if not provided
-    const config = this.config || getEmbeddingConfig();
-    if (!config) {
-      return false;
+    if (this.providerOverride) {
+      this.provider = this.providerOverride;
+    } else {
+      // Get config from env if not provided
+      const config = this.config || getEmbeddingConfig();
+      if (!config) {
+        return false;
+      }
+
+      // Create provider
+      this.provider = createEmbeddingProvider(config);
+      if (!this.provider) {
+        return false;
+      }
     }
 
-    // Create provider
-    this.provider = createEmbeddingProvider(config);
-    if (!this.provider) {
-      return false;
-    }
-
-    // Get database and run migrations
+    // Get database and ensure embedding storage exists (attached `emb` DB)
     this.db = await getDb();
-    await migrateEmbeddings();
-    await migrateCommentEmbeddings();
+    await migrateEmbeddingStorage();
 
     return true;
   }
@@ -102,8 +109,10 @@ export class EmbeddingService {
       const vectorStr = embeddingToVector(embedding);
 
       await this.db.execute({
-        sql: `UPDATE tasks SET embedding = vector(?) WHERE id = ?`,
-        args: [vectorStr, taskId],
+        sql:
+          `INSERT INTO emb.task_embeddings (task_id, embedding) VALUES (?, vector(?))
+           ON CONFLICT(task_id) DO UPDATE SET embedding = excluded.embedding`,
+        args: [taskId, vectorStr],
       });
     } catch (error) {
       logger.error(`Failed to embed task #${taskId}`, "embeddings", {
@@ -133,8 +142,10 @@ export class EmbeddingService {
       const vectorStr = embeddingToVector(embedding);
 
       await this.db.execute({
-        sql: `UPDATE comments SET embedding = vector(?) WHERE id = ?`,
-        args: [vectorStr, commentId],
+        sql:
+          `INSERT INTO emb.comment_embeddings (comment_id, embedding) VALUES (?, vector(?))
+           ON CONFLICT(comment_id) DO UPDATE SET embedding = excluded.embedding`,
+        args: [commentId, vectorStr],
       });
     } catch (error) {
       logger.error(`Failed to embed comment #${commentId}`, "embeddings", {
@@ -163,24 +174,27 @@ export class EmbeddingService {
     const embedding = await this.provider.embed(query);
     const vectorStr = embeddingToVector(embedding);
 
-    // Search tasks directly - vector_top_k returns id only, calculate distance separately
-    // Note: k parameter must be interpolated directly as vector_top_k doesn't accept bound parameters for k
+    // Search the attached embeddings DB. vector_top_k returns the indexed
+    // row's id (== task_id / comment_id, the PK alias for rowid); distance is
+    // computed separately. The index name must be schema-qualified (`emb.`).
+    // Note: k must be interpolated directly — vector_top_k doesn't bind k.
     const k = Math.max(1, Math.floor(limit));
     const taskResult = await this.db.execute({
       sql: `
-        SELECT t.id, vector_distance_cos(t.embedding, vector(?)) as distance
-        FROM vector_top_k('tasks_embedding_idx', vector(?), ${k}) v
-        JOIN tasks t ON t.id = v.id
+        SELECT v.id as id, vector_distance_cos(e.embedding, vector(?)) as distance
+        FROM vector_top_k('emb.task_embeddings_idx', vector(?), ${k}) v
+        JOIN emb.task_embeddings e ON e.task_id = v.id
       `,
       args: [vectorStr, vectorStr],
     });
 
-    // Search comments and get their parent task_ids
+    // Search comments and map them back to their parent task_ids
     const commentResult = await this.db.execute({
       sql: `
-        SELECT c.task_id as id, vector_distance_cos(c.embedding, vector(?)) as distance
-        FROM vector_top_k('comments_embedding_idx', vector(?), ${k}) v
-        JOIN comments c ON c.id = v.id
+        SELECT c.task_id as id, vector_distance_cos(e.embedding, vector(?)) as distance
+        FROM vector_top_k('emb.comment_embeddings_idx', vector(?), ${k}) v
+        JOIN emb.comment_embeddings e ON e.comment_id = v.id
+        JOIN comments c ON c.id = e.comment_id
       `,
       args: [vectorStr, vectorStr],
     });
@@ -226,10 +240,13 @@ export class EmbeddingService {
       throw new Error("Embedding service not configured");
     }
 
-    // Get tasks without embeddings
+    // Get tasks without embeddings (no row in the attached embeddings table)
     assertDefined(this.db, "Database must be initialized", "embeddings");
     const result = await this.db.execute(`
-      SELECT id, title, description FROM tasks WHERE embedding IS NULL
+      SELECT t.id, t.title, t.description
+      FROM tasks t
+      LEFT JOIN emb.task_embeddings e ON e.task_id = t.id
+      WHERE e.task_id IS NULL
     `);
 
     const tasks = result.rows as unknown as Array<{
@@ -292,8 +309,10 @@ export class EmbeddingService {
           try {
             const vectorStr = embeddingToVector(embeddings[j]);
             await this.db.execute({
-              sql: `UPDATE tasks SET embedding = vector(?) WHERE id = ?`,
-              args: [vectorStr, batch[j].id],
+              sql:
+                `INSERT INTO emb.task_embeddings (task_id, embedding) VALUES (?, vector(?))
+                 ON CONFLICT(task_id) DO UPDATE SET embedding = excluded.embedding`,
+              args: [batch[j].id, vectorStr],
             });
             processed++;
           } catch (error) {
@@ -344,7 +363,7 @@ export class EmbeddingService {
     const total = Number(totalResult.rows[0].count);
 
     const withResult = await db.execute(
-      "SELECT COUNT(*) as count FROM tasks WHERE embedding IS NOT NULL",
+      "SELECT COUNT(*) as count FROM emb.task_embeddings",
     );
     const withEmbedding = Number(withResult.rows[0].count);
 
@@ -355,7 +374,7 @@ export class EmbeddingService {
     const commentTotal = Number(commentTotalResult.rows[0].count);
 
     const commentWithResult = await db.execute(
-      "SELECT COUNT(*) as count FROM comments WHERE embedding IS NOT NULL",
+      "SELECT COUNT(*) as count FROM emb.comment_embeddings",
     );
     const commentWithEmbedding = Number(commentWithResult.rows[0].count);
 

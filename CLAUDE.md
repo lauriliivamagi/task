@@ -214,8 +214,9 @@ Multi-database structure for context separation:
 ├── secrets.json         # OAuth tokens (git-ignored)
 └── databases/
     ├── default/
-    │   ├── data.db      # SQLite database
-    │   ├── attachments/ # Uploaded files
+    │   ├── data.db        # SQLite database (synced)
+    │   ├── embeddings.db  # Vector search index (git-ignored, rebuildable)
+    │   ├── attachments/   # Uploaded files
     │   └── tui-state.json
     └── work/
         └── ...
@@ -648,6 +649,14 @@ export EMBEDDING_PROVIDER=ollama  # or openai, gemini
 cosine similarity.
 
 Embedding generation is fire-and-forget (non-blocking).
+
+**Separate storage:** Vectors and their DiskANN index live in a per-database
+`embeddings.db` file, attached as the `emb` schema (see `embeddingsTargetFor`
+and `attachEmbeddingsDb` in `src/db/client.ts`). `data.db` carries no embedding
+column — keeping the synced backup small — while `emb.task_embeddings` and
+`emb.comment_embeddings` hold the vectors. `embeddings.db` is git-ignored and
+fully rebuildable via `task embeddings backfill`. `migrateEmbeddingStorageOn`
+moves any legacy in-`data.db` embedding column into `embeddings.db` on startup.
 
 ### Git Sync
 

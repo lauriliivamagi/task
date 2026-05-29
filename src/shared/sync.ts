@@ -36,11 +36,16 @@ export interface GitResult {
   code: number;
 }
 
-// .gitignore content - excludes logs and secrets
+// .gitignore content - excludes logs, secrets, and rebuildable embeddings.
+// embeddings.db holds the vector search index, a large rebuildable artifact
+// that must never bloat the synced backup (data.db carries the real data).
 const GITIGNORE_CONTENT = `# Task - excluded from sync
 logs/
 secrets.json
 *.log
+databases/*/embeddings.db
+databases/*/embeddings.db-shm
+databases/*/embeddings.db-wal
 `;
 
 /**
