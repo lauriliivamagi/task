@@ -161,7 +161,11 @@ export function TaskList(
     };
   });
 
-  const handleHighlight = (item: { value: TaskWithProject }) => {
+  const handleHighlight = (item: { value: TaskWithProject } | undefined) => {
+    // ink-select-input can call onHighlight with an out-of-range item when the
+    // visible limit shrinks (e.g. terminal resize after detaching/re-attaching
+    // a session) while its internal selectedIndex is stale. Ignore those.
+    if (!item?.value) return;
     actorRef.send({ type: "HIGHLIGHT_TASK", task: item.value });
   };
 
