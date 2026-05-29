@@ -1,5 +1,5 @@
 {
-  "version": "1.8.1",
+  "version": "1.8.2",
   "publish": false,
   "lint": {
     "rules": {
@@ -17,7 +17,6 @@
     "start": "deno run -A src/main.ts",
     "serve": "deno run -A src/main.ts serve",
     "tui": "deno run -A src/main.ts tui",
-    "generate-sdk": "deno run -A scripts/generate-sdk.ts",
     "test": "TASK_CLI_LOG_DISABLED=1 TASK_CLI_DB_URL=:memory: deno test -A",
     "test:cov": "rm -rf coverage && TASK_CLI_LOG_DISABLED=1 TASK_CLI_DB_URL=:memory: deno test -A --coverage=coverage",
     "coverage": "deno coverage coverage --exclude=\"^file:///tmp/\"",
@@ -36,7 +35,7 @@
     "@std/fmt": "jsr:@std/fmt@^1.0.8",
     "chrono-node": "npm:chrono-node@^2.7.0",
     "rrule": "npm:rrule@^2.8.1",
-    "hono": "npm:hono@^4.6.0",
+    "hono": "npm:hono@^4.12.23",
     "@hono/zod-openapi": "npm:@hono/zod-openapi@^1.1.5",
     "@hono/swagger-ui": "npm:@hono/swagger-ui@^0.5.0",
     "@hono/zod-validator": "npm:@hono/zod-validator@^0.7.5",
@@ -50,7 +49,6 @@
     "react": "npm:react@^19.2.0",
     "react/jsx-runtime": "npm:react@^19.2.0/jsx-runtime",
     "@types/react": "npm:@types/react@^19.2.7",
-    "@hey-api/openapi-ts": "npm:@hey-api/openapi-ts@^0.88.0",
     "xstate": "npm:xstate@^5.24.0",
     "@xstate/react": "npm:@xstate/react@^6.0.0",
     "@std/assert": "jsr:@std/assert@^1.0.0",
