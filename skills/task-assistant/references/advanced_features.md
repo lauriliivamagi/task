@@ -34,7 +34,7 @@ task work <id> --template python  # Use specific template
 task work <id> --name my-project  # Custom directory name
 task work <id> --no-open          # Create but don't open IDE
 task work <id> --open             # Open existing workspace
-task work --list-templates        # Show available templates
+task work <id> --list-templates   # Show available templates
 ```
 
 Generated workspace structure:

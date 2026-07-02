@@ -26,7 +26,10 @@ Query parameters:
 | `due_before` | string  | Tasks due before date (YYYY-MM-DD)       |
 | `due_after`  | string  | Tasks due after date (YYYY-MM-DD)        |
 | `all`        | boolean | Include completed tasks                  |
-| `limit`      | number  | Max results (default 10 for semantic)    |
+| `limit`      | number  | Max results, 1-100                       |
+
+Boolean flags accept `true` or `1`; anything else is false. When `limit` is
+omitted, semantic search returns 10 results and normal listing is unlimited.
 
 #### Create Task
 
@@ -41,7 +44,7 @@ Content-Type: application/json
   "parent_id": "number (for subtasks)",
   "due_date": "YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ (date-only stored as UTC midnight, datetime with time interpreted as local and converted to UTC)",
   "due_date_natural": "string (e.g. 'tomorrow', 'tomorrow at 15:00', 'next friday 14:00')",
-  "priority": "number (0, 1, 2)",
+  "duration_hours": "number (0.25-24)",
   "tags": ["string (creates if not exists)"],
   "recurrence": {
     "type": "daily|weekly|monthly|yearly",
@@ -62,7 +65,9 @@ Content-Type: application/json
 }
 ```
 
-Note: Subtasks (tasks with `parent_id`) cannot have recurrence.
+Note: Subtasks (tasks with `parent_id`) cannot have recurrence. New tasks always
+start as `todo` with priority 0 — single create has no `priority` field (batch
+create does); set it with a follow-up `PATCH`.
 
 #### Batch Create Tasks
 
@@ -90,7 +95,12 @@ Response:
 ```json
 {
   "created": [
-    { "id": 1, "title": "Main task", "subtask_ids": [2, 3] }
+    {
+      "id": 1,
+      "title": "Main task",
+      "parent_id": null,
+      "subtasks": [{ "id": 2, "title": "Subtask 1" }]
+    }
   ]
 }
 ```
@@ -129,7 +139,9 @@ When updating status to `done` on a recurring task, the response includes
 DELETE /tasks/:id
 ```
 
-Deletes the task and all its subtasks (cascade delete).
+Deletes the task and all its subtasks (cascade delete), including their
+comments, attachments, and stored embeddings. Returns 404 if the task doesn't
+exist — as do all DELETE endpoints for missing resources.
 
 #### Bulk Update
 
@@ -139,7 +151,7 @@ Content-Type: application/json
 
 {
   "ids": [1, 2, 3],
-  "updates": {
+  "update": {
     "status": "done",
     "priority": 1
   }
@@ -233,6 +245,19 @@ Content-Type: application/json
 
 Creates tags if they don't exist.
 
+#### Replace Tags on Task
+
+```
+PUT /tasks/:taskId/tags
+Content-Type: application/json
+
+{
+  "tags": ["string"]
+}
+```
+
+Replaces the task's full tag set.
+
 #### Remove Tag from Task
 
 ```
@@ -312,7 +337,7 @@ POST /parse
 Content-Type: application/json
 
 {
-  "format": "text|markdown",
+  "format": "text|markdown|json",
   "content": "Review PR @work due:tomorrow priority:high\n  - Check tests\n  - Approve"
 }
 ```
@@ -397,10 +422,11 @@ task add <title> [description] [options]
 Options:
   -p, --project <name>    Assign to project
   -P, --parent <id>       Create as subtask
-  -d, --due <date>        Due date (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ)
+  -d, --due <date>        Due date: ISO ("2025-12-31", "2025-12-31T14:00:00Z")
+                          or natural language ("tomorrow at 15:00")
   -t, --tag <name>        Add tag (repeatable)
   -r, --recurrence <rule> Recurrence rule (e.g. "every day", "every Monday")
-  --due-natural <text>    Natural language date (e.g. "tomorrow at 15:00")
+  --duration <hours>      Task duration in hours (0.25-24)
 ```
 
 ### task list
@@ -437,6 +463,8 @@ Options:
   --clear-project          Remove task from its project
   -r, --recurrence <rule>  Set recurrence (e.g. "every day", "weekly")
   --clear-recurrence       Remove recurrence from task
+  --duration <hours>       Set task duration in hours (0.25-24)
+  --clear-duration         Remove task duration
 ```
 
 ### task view
@@ -590,8 +618,8 @@ Options:
 
 **Keyboard shortcuts:**
 
-Global: `q` (quit), `r` (refresh), `Tab` (switch panels), `Shift+P` (command
-palette)
+Global: `q` (quit), `?` (help), `Tab` (switch panels), `Shift+P` (command
+palette), `Shift+R` (refresh, list view)
 
 List panel:
 
@@ -650,17 +678,22 @@ task gcal status                  # Check authentication status
 task gcal logout                  # Clear stored credentials
 task gcal calendars               # List available calendars
 task gcal sync <taskId>           # Sync a task to Google Calendar
+task gcal sync --all              # Sync all unsynced tasks with due dates
 task gcal use <calendar-id>       # Set default calendar for syncing
 ```
 
 **Sync options:**
 
-| Option                  | Description                             |
-| ----------------------- | --------------------------------------- |
-| `-d, --duration <hrs>`  | Event duration in hours (default: 1)    |
-| `-c, --calendar <name>` | Target calendar name (default: primary) |
-| `--date <datetime>`     | Override due date (natural language)    |
-| `--json`                | Output in JSON format                   |
+| Option                  | Description                                |
+| ----------------------- | ------------------------------------------ |
+| `--all`                 | Sync all unsynced tasks with due dates     |
+| `-d, --duration <hrs>`  | Event duration in hours, 0-24 (default: 1) |
+| `-c, --calendar <id>`   | Target calendar ID (default: configured)   |
+| `--datetime <datetime>` | Override due date (natural language)       |
+| `--attach <url>`        | Sync against an external server            |
+
+If a synced event was deleted in Google Calendar, the next sync creates a fresh
+event and re-links the task.
 
 **Setup:**
 
@@ -740,18 +773,18 @@ Multi-database structure for context separation (work, home, projects):
 ```
 ~/.task-cli/
 ├── config.json              # Configuration (includes activeDb)
+├── secrets.json             # OAuth tokens, mode 0600 (git-ignored)
 ├── logs/                    # Daily rotated log files
 ├── templates/               # Task sharing templates (.txt)
 ├── workspace-templates/     # Workspace project templates
 └── databases/
     ├── default/
-    │   ├── data.db          # SQLite database
+    │   ├── data.db          # SQLite database (synced by `task sync`)
+    │   ├── embeddings.db    # Vector index (git-ignored, rebuildable)
     │   ├── attachments/     # Uploaded files
     │   └── tui-state.json   # TUI state persistence
     ├── work/
-    │   ├── data.db
-    │   ├── attachments/
-    │   └── tui-state.json
+    │   └── ...
     └── home/
         └── ...
 ```
@@ -761,17 +794,22 @@ Automatic migration from single-db layout occurs on first run.
 
 ## Environment Variables
 
-| Variable                      | Description                                         |
-| ----------------------------- | --------------------------------------------------- |
-| `EMBEDDING_PROVIDER`          | `ollama`, `openai`, or `gemini`                     |
-| `OLLAMA_URL`                  | Ollama server URL (default: http://localhost:11434) |
-| `OLLAMA_MODEL`                | Ollama model (default: nomic-embed-text)            |
-| `OPENAI_API_KEY`              | OpenAI API key                                      |
-| `OPENAI_EMBEDDING_MODEL`      | OpenAI model (default: text-embedding-3-small)      |
-| `GEMINI_API_KEY`              | Google Gemini API key                               |
-| `GEMINI_EMBEDDING_DIMENSIONS` | Dimensions: 768, 1536, or 3072                      |
-| `TASK_CLI_LOG_LEVEL`          | Log level: debug, info, warn, error                 |
-| `TASK_CLI_LOG_DISABLED`       | Set to 1 to disable file logging                    |
-| `TASK_CLI_DB_URL`             | Database path (default: ~/.task-cli/data.db)        |
-| `TASK_CLI_REPOS_DIR`          | Workspace directory (default: ~/git)                |
-| `TASK_CLI_IDE_COMMAND`        | IDE command for `task work` (default: claude)       |
+| Variable                     | Description                                          |
+| ---------------------------- | ---------------------------------------------------- |
+| `EMBEDDING_PROVIDER`         | `ollama`, `openai`, or `gemini`                      |
+| `OLLAMA_URL`                 | Ollama server URL (default: http://localhost:11434)  |
+| `TASK_CLI_OLLAMA_MODEL`      | Ollama model (default: nomic-embed-text)             |
+| `OPENAI_API_KEY`             | OpenAI API key                                       |
+| `TASK_CLI_OPENAI_MODEL`      | OpenAI model (default: text-embedding-3-small)       |
+| `GEMINI_API_KEY`             | Google Gemini API key                                |
+| `TASK_CLI_GEMINI_DIMENSIONS` | Gemini output dimensions (default: 768)              |
+| `TASK_CLI_LOG_LEVEL`         | Log level: debug, info, warn, error                  |
+| `TASK_CLI_LOG_DISABLED`      | Set to 1 to disable file logging                     |
+| `TASK_CLI_DB_URL`            | Database URL override (default: active db's data.db) |
+| `TASK_CLI_REPOS_DIR`         | Workspace directory (default: ~/git)                 |
+| `TASK_CLI_IDE_COMMAND`       | IDE command for `task work` (default: claude)        |
+
+Switching the embedding provider/model clears the stored vectors on next use
+(different models produce incomparable vectors) — run `task embeddings
+backfill`
+afterwards to rebuild the search index.
