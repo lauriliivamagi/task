@@ -48,9 +48,9 @@ export interface EmbeddingConfig {
 
 /** Read embedding config from environment variables */
 export function getEmbeddingConfig(): EmbeddingConfig | null {
-  const provider = Deno.env.get("TASK_CLI_EMBEDDING_PROVIDER") as
-    | ProviderType
-    | undefined;
+  // Both prefixed and unprefixed names are accepted (docs use the short ones)
+  const provider = (Deno.env.get("TASK_CLI_EMBEDDING_PROVIDER") ??
+    Deno.env.get("EMBEDDING_PROVIDER")) as ProviderType | undefined;
 
   // If no provider specified and no API keys, return null (disabled)
   if (
@@ -62,6 +62,7 @@ export function getEmbeddingConfig(): EmbeddingConfig | null {
     return {
       provider: "ollama",
       ollamaUrl: Deno.env.get("TASK_CLI_OLLAMA_URL") ||
+        Deno.env.get("OLLAMA_URL") ||
         "http://localhost:11434",
       ollamaModel: Deno.env.get("TASK_CLI_OLLAMA_MODEL") || "nomic-embed-text",
     };
@@ -76,7 +77,9 @@ export function getEmbeddingConfig(): EmbeddingConfig | null {
       "text-embedding-3-small",
 
     // Ollama
-    ollamaUrl: Deno.env.get("TASK_CLI_OLLAMA_URL") || "http://localhost:11434",
+    ollamaUrl: Deno.env.get("TASK_CLI_OLLAMA_URL") ||
+      Deno.env.get("OLLAMA_URL") ||
+      "http://localhost:11434",
     ollamaModel: Deno.env.get("TASK_CLI_OLLAMA_MODEL") || "nomic-embed-text",
 
     // Gemini

@@ -66,7 +66,8 @@ task db rename work office
 task db delete old-project
 ```
 
-You'll be asked to confirm. Use `--yes` to skip confirmation.
+You'll be asked to confirm. Use `--force` to skip confirmation. The currently
+active database and the last remaining database cannot be deleted.
 
 ## Where databases are stored
 

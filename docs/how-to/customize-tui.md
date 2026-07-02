@@ -46,48 +46,57 @@ Open `~/.task-cli/config.json` and add a `keybindings` section:
 
 ## List View actions
 
-| Action           | Default   | Description           |
-| ---------------- | --------- | --------------------- |
-| `moveUp`         | `k`       | Move selection up     |
-| `moveDown`       | `j`       | Move selection down   |
-| `createTask`     | `n`       | Create new task       |
-| `createSubtask`  | `o`       | Create subtask        |
-| `editTitle`      | `e`       | Edit task title       |
-| `toggleDone`     | `x`       | Toggle done status    |
-| `toggleProgress` | `p`       | Toggle in-progress    |
-| `yankTask`       | `y`       | Copy to clipboard     |
-| `startWork`      | `w`       | Create workspace      |
-| `moveTaskUp`     | `Shift+K` | Reorder task up       |
-| `moveTaskDown`   | `Shift+J` | Reorder task down     |
-| `refresh`        | `Shift+R` | Refresh tasks         |
-| `startSearch`    | `/`       | Open search           |
-| `deleteTask`     | `-`       | Delete task           |
-| `switchPanel`    | `Tab`     | Switch to detail view |
+| Action            | Default   | Description           |
+| ----------------- | --------- | --------------------- |
+| `moveUp`          | `k`       | Move selection up     |
+| `moveDown`        | `j`       | Move selection down   |
+| `createTask`      | `n`       | Create new task       |
+| `createSubtask`   | `o`       | Create subtask        |
+| `editTitleInList` | `e`       | Edit task title       |
+| `toggleDone`      | `x`       | Toggle done status    |
+| `toggleProgress`  | `p`       | Toggle in-progress    |
+| `yankTask`        | `y`       | Copy to clipboard     |
+| `startWork`       | `w`       | Create workspace      |
+| `moveTaskUp`      | `Shift+K` | Reorder task up       |
+| `moveTaskDown`    | `Shift+J` | Reorder task down     |
+| `refresh`         | `Shift+R` | Refresh tasks         |
+| `startSearch`     | `/`       | Open search           |
+| `clearSearch`     | —         | Clear active search   |
+| `deleteTask`      | `-`       | Delete task           |
+| `switchToDetail`  | `Tab`     | Switch to detail view |
 
 ## Detail View actions
 
-| Action            | Default   | Description             |
-| ----------------- | --------- | ----------------------- |
-| `editTitle`       | `e`       | Edit title              |
-| `editDescription` | `d`       | Edit description        |
-| `addComment`      | `c`       | Add comment             |
-| `changeStatus`    | `s`       | Change status           |
-| `changePriority`  | `p`       | Change priority         |
-| `changeProject`   | `o`       | Change project          |
-| `changeDueDate`   | `u`       | Change due date         |
-| `editTags`        | `t`       | Edit tags               |
-| `editRecurrence`  | `r`       | Edit recurrence         |
-| `addAttachment`   | `a`       | Add attachment          |
-| `syncToCalendar`  | `Shift+G` | Sync to Google Calendar |
-| `switchPanel`     | `Tab`     | Switch to list view     |
+| Action                 | Default   | Description               |
+| ---------------------- | --------- | ------------------------- |
+| `editTitle`            | `e`       | Edit title                |
+| `editDescription`      | `d`       | Edit description          |
+| `addComment`           | `c`       | Add comment               |
+| `changeStatus`         | `s`       | Change status             |
+| `changePriority`       | `p`       | Change priority           |
+| `changeProject`        | `o`       | Change project            |
+| `changeDueDate`        | `u`       | Change due date           |
+| `editTags`             | `t`       | Edit tags                 |
+| `editRecurrence`       | `r`       | Edit recurrence           |
+| `addAttachment`        | `a`       | Add attachment            |
+| `openAttachment`       | `Shift+O` | Open attachment           |
+| `deleteAttachment`     | `Shift+X` | Delete attachment         |
+| `pasteImageAttachment` | `Shift+V` | Paste image as attachment |
+| `editDuration`         | `Shift+D` | Edit duration             |
+| `syncToCalendar`       | `Shift+G` | Sync to Google Calendar   |
+| `switchToList`         | `Tab`     | Switch to list view       |
 
 ## Global actions
 
-| Action           | Default   | Description          |
-| ---------------- | --------- | -------------------- |
-| `quit`           | `q`       | Quit the TUI         |
-| `help`           | `?`       | Show help            |
-| `commandPalette` | `Shift+P` | Open command palette |
+| Action               | Default   | Description          |
+| -------------------- | --------- | -------------------- |
+| `quit`               | `q`       | Quit the TUI         |
+| `openHelp`           | `?`       | Show help            |
+| `openCommandPalette` | `Shift+P` | Open command palette |
+| `cancel`             | `Escape`  | Cancel / close       |
+
+Unknown action names are rejected when the config is loaded — the TUI falls back
+to the default binding and logs a warning.
 
 ## View current shortcuts
 

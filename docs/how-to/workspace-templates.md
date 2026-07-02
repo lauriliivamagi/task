@@ -80,7 +80,7 @@ task work 42 --template "Knowledge Work"
 List available templates:
 
 ```bash
-task work --list-templates
+task work 42 --list-templates
 ```
 
 ## What happens during workspace creation

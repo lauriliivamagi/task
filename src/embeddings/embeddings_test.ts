@@ -11,6 +11,7 @@ import {
   type EmbeddingConfig,
   type EmbeddingProvider,
   embeddingToVector,
+  getEmbeddingConfig,
   normalizeEmbedding,
 } from "./provider.ts";
 import { createEmbeddingProvider } from "./index.ts";
@@ -225,6 +226,12 @@ Deno.test("Embedding Service", async (t) => {
   // Save original env values
   const originalProvider = Deno.env.get("EMBEDDING_PROVIDER");
   const originalOllamaUrl = Deno.env.get("OLLAMA_URL");
+  const originalPrefixedProvider = Deno.env.get("TASK_CLI_EMBEDDING_PROVIDER");
+
+  // Pin the provider: ambient EMBEDDING_PROVIDER/TASK_CLI_EMBEDDING_PROVIDER
+  // from the developer's shell must not leak into these tests
+  Deno.env.delete("TASK_CLI_EMBEDDING_PROVIDER");
+  Deno.env.set("EMBEDDING_PROVIDER", "ollama");
 
   try {
     await initDb();
@@ -353,6 +360,11 @@ Deno.test("Embedding Service", async (t) => {
     } else {
       Deno.env.delete("OLLAMA_URL");
     }
+    if (originalPrefixedProvider) {
+      Deno.env.set("TASK_CLI_EMBEDDING_PROVIDER", originalPrefixedProvider);
+    } else {
+      Deno.env.delete("TASK_CLI_EMBEDDING_PROVIDER");
+    }
     Deno.env.delete("TASK_CLI_DB_URL");
     resetDbClient();
   }
@@ -427,6 +439,12 @@ Deno.test("Comment Embedding Service", async (t) => {
   resetDbClient();
   Deno.env.set("TASK_CLI_DB_URL", ":memory:");
 
+  // Pin the provider so ambient shell env doesn't leak in
+  const savedProvider = Deno.env.get("EMBEDDING_PROVIDER");
+  const savedPrefixedProvider = Deno.env.get("TASK_CLI_EMBEDDING_PROVIDER");
+  Deno.env.delete("TASK_CLI_EMBEDDING_PROVIDER");
+  Deno.env.set("EMBEDDING_PROVIDER", "ollama");
+
   try {
     await initDb();
 
@@ -460,6 +478,16 @@ Deno.test("Comment Embedding Service", async (t) => {
       );
     });
   } finally {
+    if (savedProvider) {
+      Deno.env.set("EMBEDDING_PROVIDER", savedProvider);
+    } else {
+      Deno.env.delete("EMBEDDING_PROVIDER");
+    }
+    if (savedPrefixedProvider) {
+      Deno.env.set("TASK_CLI_EMBEDDING_PROVIDER", savedPrefixedProvider);
+    } else {
+      Deno.env.delete("TASK_CLI_EMBEDDING_PROVIDER");
+    }
     Deno.env.delete("TASK_CLI_DB_URL");
     resetDbClient();
   }
@@ -650,5 +678,41 @@ Deno.test("Vector space consistency", async (t) => {
   } finally {
     Deno.env.delete("TASK_CLI_DB_URL");
     resetDbClient();
+  }
+});
+
+Deno.test("getEmbeddingConfig - accepts documented unprefixed env vars", () => {
+  const saved = {
+    prefixed: Deno.env.get("TASK_CLI_EMBEDDING_PROVIDER"),
+    unprefixed: Deno.env.get("EMBEDDING_PROVIDER"),
+    ollamaPrefixed: Deno.env.get("TASK_CLI_OLLAMA_URL"),
+    ollamaUnprefixed: Deno.env.get("OLLAMA_URL"),
+  };
+  try {
+    Deno.env.delete("TASK_CLI_EMBEDDING_PROVIDER");
+    Deno.env.delete("TASK_CLI_OLLAMA_URL");
+    Deno.env.set("EMBEDDING_PROVIDER", "ollama");
+    Deno.env.set("OLLAMA_URL", "http://example.test:11434");
+
+    const config = getEmbeddingConfig();
+    assertExists(config);
+    assertEquals(config.provider, "ollama");
+    assertEquals(config.ollamaUrl, "http://example.test:11434");
+
+    // Prefixed names take precedence
+    Deno.env.set("TASK_CLI_OLLAMA_URL", "http://prefixed.test:11434");
+    assertEquals(getEmbeddingConfig()?.ollamaUrl, "http://prefixed.test:11434");
+  } finally {
+    for (
+      const [key, value] of [
+        ["TASK_CLI_EMBEDDING_PROVIDER", saved.prefixed],
+        ["EMBEDDING_PROVIDER", saved.unprefixed],
+        ["TASK_CLI_OLLAMA_URL", saved.ollamaPrefixed],
+        ["OLLAMA_URL", saved.ollamaUnprefixed],
+      ] as const
+    ) {
+      if (value === undefined) Deno.env.delete(key);
+      else Deno.env.set(key, value);
+    }
   }
 });

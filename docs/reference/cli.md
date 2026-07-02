@@ -76,7 +76,7 @@ task list -s "API integration" -n 5    # Semantic search
 | `--priority <level>`     | Filter by priority: 0 (Normal), 1 (High), 2 (Urgent) |
 | `--status <status>`      | Filter by status: todo, in-progress, done            |
 | `-s, --semantic <query>` | Semantic search (requires embedding provider)        |
-| `-n, --limit <number>`   | Limit results (default: 10)                          |
+| `-n, --limit <number>`   | Limit results, 1-100 (semantic defaults to 10)       |
 
 ### `task view <id>`
 
@@ -112,10 +112,11 @@ task update 42 --clear-project
 | `-r, --recurrence <rule>`  | Set recurrence pattern                         |
 | `--clear-recurrence`       | Remove recurrence                              |
 
-### `task delete <id>`
+### Deleting tasks
 
-Delete a task and its subtasks (cascade delete). Use bulk delete for single or
-multiple tasks:
+There is no standalone `delete` command — deletion goes through
+`task bulk delete`, for one task or many. Subtasks are cascade-deleted with
+their parent:
 
 ```bash
 task bulk delete 42 --yes        # Delete single task
@@ -261,15 +262,16 @@ task tag delete 3
 
 ---
 
-## Project Management
+## Projects
 
-### `task project list`
+There is no `task project` command. Projects are created implicitly the first
+time they are referenced:
 
-List all projects.
-
-### `task project create <name>`
-
-Create a new project.
+```bash
+task add "New task" --project "Work"       # Creates "Work" if needed
+task update 42 --project "Work"            # Same on update
+task list --project "Work"                 # Filter by project
+```
 
 ---
 
@@ -343,22 +345,28 @@ Clear stored credentials.
 
 List available calendars.
 
-### `task gcal sync <taskId>`
+### `task gcal sync [taskId]`
 
-Sync a task to Google Calendar.
+Sync a task (or all unsynced tasks with due dates) to Google Calendar.
 
 ```bash
 task gcal sync 42                    # Use due_date, 1 hour duration
 task gcal sync 42 --duration 2       # Custom duration
 task gcal sync 42 --calendar "Work"  # Specific calendar
-task gcal sync 42 --date "tomorrow 14:00" --duration 1.5  # Override date
+task gcal sync 42 --datetime "tomorrow 14:00" --duration 1.5  # Override date
+task gcal sync --all                 # Sync all unsynced tasks with due dates
 ```
 
-| Option                  | Description                             |
-| ----------------------- | --------------------------------------- |
-| `-d, --duration <hrs>`  | Event duration in hours (default: 1)    |
-| `-c, --calendar <name>` | Target calendar name (default: primary) |
-| `--date <datetime>`     | Override due date (natural language)    |
+| Option                  | Description                                |
+| ----------------------- | ------------------------------------------ |
+| `--all`                 | Sync all unsynced tasks with due dates     |
+| `-d, --duration <hrs>`  | Event duration in hours, 0-24 (default: 1) |
+| `-c, --calendar <id>`   | Target calendar ID (default: configured)   |
+| `--datetime <datetime>` | Override due date (natural language)       |
+| `--attach <url>`        | Sync against an external server            |
+
+If a synced event was deleted in Google Calendar, the next sync creates a fresh
+event and re-links the task.
 
 ### `task gcal use <calendar-id>`
 
@@ -399,7 +407,7 @@ task work 42 --template "Knowledge Work"   # Use configured external template
 task work 42 --name my-project             # Custom directory name
 task work 42 --no-open                     # Create but don't open IDE
 task work 42 --open                        # Open existing workspace
-task work --list-templates                 # Show available templates
+task work 42 --list-templates              # Show available templates
 ```
 
 | Option                  | Description                                        |
@@ -444,7 +452,7 @@ Output a formatted prompt for sharing with AI agents.
 task share 42                    # Default template
 task share 42 --template work    # Custom template
 task share 42 --raw              # Raw JSON
-task share --list-templates      # List templates
+task share 42 --list-templates   # List templates
 ```
 
 | Option                  | Description                                    |

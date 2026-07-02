@@ -97,17 +97,17 @@ export const embeddingsCommand = {
           console.log("");
           console.log("For Ollama (local, free):");
           console.log("  OLLAMA_URL=http://localhost:11434 (default)");
-          console.log("  OLLAMA_MODEL=nomic-embed-text (default)");
+          console.log("  TASK_CLI_OLLAMA_MODEL=nomic-embed-text (default)");
           console.log("");
           console.log("For OpenAI:");
           console.log("  OPENAI_API_KEY=sk-...");
           console.log(
-            "  OPENAI_EMBEDDING_MODEL=text-embedding-3-small (default)",
+            "  TASK_CLI_OPENAI_MODEL=text-embedding-3-small (default)",
           );
           console.log("");
           console.log("For Gemini:");
           console.log("  GEMINI_API_KEY=...");
-          console.log("  GEMINI_EMBEDDING_DIMENSIONS=768 (default, max 3072)");
+          console.log("  TASK_CLI_GEMINI_DIMENSIONS=768 (default, max 3072)");
           return;
         }
 

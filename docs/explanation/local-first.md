@@ -100,8 +100,10 @@ We chose SQLite because it:
 - Handles concurrent reads well
 - Stores everything in one file
 
-For vector search (semantic search), we use SQLite's sqlite-vec extension,
-keeping embeddings alongside task data.
+For vector search (semantic search), we use libsql's native vector support.
+Embeddings live in a separate per-database `embeddings.db` file next to
+`data.db`: still local-first, but excluded from git sync because the vectors are
+large and fully rebuildable with `task embeddings backfill`.
 
 ## Alternative Approaches We Considered
 

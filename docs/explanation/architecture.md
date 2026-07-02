@@ -102,7 +102,7 @@ For embeddings:
 1. Task created/updated
 2. Server triggers embedding generation (async)
 3. Embedding provider called
-4. Vector stored in SQLite
+4. Vector stored in the attached `embeddings.db` (git-ignored, rebuildable)
 5. (User never waits for this)
 
 ## The TUI State Machine

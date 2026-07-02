@@ -41,9 +41,10 @@ a vector close to the one above, even though the words are different.
 
 When you create a task:
 
-1. The task title and description are sent to an embedding provider
+1. The task title, description, and tags are sent to an embedding provider
 2. The provider returns a 768-dimension vector
-3. The vector is stored in SQLite as a blob
+3. The vector is stored in a separate per-database `embeddings.db` file,
+   attached to the main connection as the `emb` schema
 
 When you search:
 
@@ -67,26 +68,31 @@ leaves your computer.
 **OpenAI** and **Gemini** send task text to their APIs. More accurate, but your
 task content goes to their servers.
 
-## Vector Storage in SQLite
+## Vector Storage
 
 Vectors are stored as `F32_BLOB`—32-bit floating point numbers packed into a
-binary blob. SQLite's sqlite-vec extension provides:
+binary blob—using libsql's native vector support:
 
-- `vector_top_k()`: Find k most similar vectors
-- Cosine similarity: Measure how "close" two vectors are
+- `vector_top_k()`: Find the k most similar vectors via a DiskANN index
+- `vector_distance_cos()`: Cosine distance between two vectors
 
 The query looks like:
 
 ```sql
-SELECT task_id, distance
-FROM task_embeddings
-WHERE rowid IN (
-  SELECT rowid FROM task_embeddings
-  WHERE embedding MATCH ?
-  ORDER BY distance
-  LIMIT 10
-)
+SELECT v.id, vector_distance_cos(e.embedding, vector(?)) AS distance
+FROM vector_top_k('emb.task_embeddings_idx', vector(?), 10) v
+JOIN emb.task_embeddings e ON e.task_id = v.id
+JOIN tasks t ON t.id = v.id
 ```
+
+Vectors and their DiskANN index live in `embeddings.db`, separate from the
+synced `data.db`, because they're large and fully rebuildable — `task sync`
+stays fast and the git history stays small. Deleting a task removes its vectors,
+and the search query joins `tasks` to filter any leftovers.
+
+Each database records which provider/model generated its vectors. Switching
+providers clears the index (vectors from different models aren't comparable) and
+`task embeddings backfill` rebuilds it.
 
 ## Fire-and-Forget Generation
 

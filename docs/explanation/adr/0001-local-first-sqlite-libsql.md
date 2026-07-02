@@ -13,7 +13,8 @@ epistemic-layer: heuristic
 
 # 0001. Local-first storage on SQLite (libsql/Turso)
 
-- Status: Accepted
+- Status: Accepted (amended 2026-07-02: embedding co-location revised, see
+  below)
 - Date: 2025-12-07
 - Deciders: Task maintainers
 
@@ -50,3 +51,12 @@ the same SQLite database.
   simpler and sufficient for individuals and small teams.
 - **Flat files (JSON/Markdown)** — rejected: hand-editable, but complex queries
   (filtering, reports, semantic search) become slow without a query engine.
+
+## Amendment (v1.10.0, 2026)
+
+The original decision co-located vector embeddings in the same SQLite file. In
+practice the vectors and their DiskANN index dominated the file size and bloated
+the Git-sync history for data that is fully rebuildable. Since v1.10.0,
+embeddings live in a separate per-database `embeddings.db`, attached to the same
+connection as the `emb` schema and excluded from sync. The storage remains
+local-first SQLite; only the co-location consequence above no longer holds.

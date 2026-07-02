@@ -17,43 +17,51 @@ Complete list of keyboard shortcuts for the TUI.
 
 ## List View
 
-| Key       | Action                          |
-| --------- | ------------------------------- |
-| `j` / `↓` | Move selection down             |
-| `k` / `↑` | Move selection up               |
-| `n`       | Create new task                 |
-| `o`       | Create subtask of selected task |
-| `e`       | Edit task title                 |
-| `x`       | Toggle done/todo status         |
-| `p`       | Toggle in-progress status       |
-| `y`       | Copy task to clipboard          |
-| `w`       | Create workspace and start work |
-| `Shift+J` | Move task down in list          |
-| `Shift+K` | Move task up in list            |
-| `Shift+R` | Refresh tasks                   |
-| `/`       | Open search                     |
-| `:`       | Open Vim-like command prompt    |
-| `-`       | Delete task (with confirmation) |
-| `Tab`     | Switch to detail view           |
-| `Enter`   | View task details               |
+| Key                         | Action                          |
+| --------------------------- | ------------------------------- |
+| `j` / `↓`                   | Move selection down             |
+| `k` / `↑`                   | Move selection up               |
+| `n`                         | Create new task                 |
+| `o`                         | Create subtask of selected task |
+| `e`                         | Edit task title                 |
+| `x`                         | Toggle done/todo status         |
+| `p`                         | Toggle in-progress status       |
+| `y`                         | Copy task to clipboard          |
+| `w`                         | Create workspace and start work |
+| `Shift+J`                   | Move task down in list          |
+| `Shift+K`                   | Move task up in list            |
+| `Shift+R`                   | Refresh tasks                   |
+| `/`                         | Open search                     |
+| `:`                         | Open Vim-like command prompt    |
+| `-`                         | Delete task (with confirmation) |
+| `Tab` / `l` / `→` / `Enter` | Switch to detail view           |
 
 ## Detail View
 
-| Key       | Action                  |
-| --------- | ----------------------- |
-| `e`       | Edit title              |
-| `d`       | Edit description        |
-| `c`       | Add comment             |
-| `s`       | Change status           |
-| `p`       | Change priority         |
-| `o`       | Change project          |
-| `u`       | Change due date         |
-| `t`       | Edit tags               |
-| `r`       | Edit recurrence         |
-| `a`       | Add attachment          |
-| `Shift+G` | Sync to Google Calendar |
-| `Tab`     | Switch to list view     |
-| `Escape`  | Cancel current action   |
+| Key               | Action                    |
+| ----------------- | ------------------------- |
+| `e`               | Edit title                |
+| `d`               | Edit description          |
+| `c`               | Add comment               |
+| `s`               | Change status             |
+| `p`               | Change priority           |
+| `o`               | Change project            |
+| `u`               | Change due date           |
+| `t`               | Edit tags                 |
+| `r`               | Edit recurrence           |
+| `a`               | Add attachment            |
+| `Shift+O`         | Open attachment           |
+| `Shift+X`         | Delete attachment         |
+| `Shift+V`         | Paste image as attachment |
+| `Shift+D`         | Edit duration             |
+| `Shift+G`         | Sync to Google Calendar   |
+| `y`               | Copy task to clipboard    |
+| `w`               | Create workspace          |
+| `/`               | Open search               |
+| `Shift+J`         | Move task down in list    |
+| `Shift+K`         | Move task up in list      |
+| `Tab` / `h` / `←` | Switch to list view       |
+| `Escape`          | Cancel current action     |
 
 ## Global
 

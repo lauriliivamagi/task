@@ -62,14 +62,17 @@ The task appears in your calendar using its due date as the event start time.
 ## Customize sync options
 
 ```bash
-# Set event duration (default: 1 hour)
+# Set event duration in hours, up to 24 (default: 1)
 task gcal sync 42 --duration 2
 
-# Use a specific calendar
-task gcal sync 42 --calendar "Work"
+# Use a specific calendar (by ID; see `task gcal calendars`)
+task gcal sync 42 --calendar "work@group.calendar.google.com"
 
 # Override the date
-task gcal sync 42 --date "tomorrow 14:00"
+task gcal sync 42 --datetime "tomorrow 14:00"
+
+# Sync all unsynced tasks with due dates
+task gcal sync --all
 ```
 
 ## Set a default calendar
@@ -97,4 +100,13 @@ task gcal status    # Auth status
 ## Re-syncing updates the event
 
 If you sync a task that's already been synced, the existing calendar event is
-updated rather than creating a duplicate.
+updated rather than creating a duplicate. If the event was deleted in Google
+Calendar in the meantime, a fresh event is created and the task re-linked
+automatically.
+
+## Security notes
+
+- OAuth tokens and client credentials are stored in `~/.task-cli/secrets.json`
+  with owner-only permissions (mode 0600); the file is excluded from
+  `task sync`.
+- The temporary OAuth callback server binds to `127.0.0.1` only.

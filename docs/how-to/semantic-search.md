@@ -85,9 +85,22 @@ task embeddings status    # Coverage statistics
 task embeddings provider  # Current provider
 ```
 
+## Switching providers
+
+Embeddings from different providers/models are not comparable, so switching
+(e.g. from Ollama to OpenAI) clears the stored vectors on next use and prints a
+warning. Rebuild the index afterwards:
+
+```bash
+task embeddings backfill
+```
+
 ## How it works
 
-- New tasks get embeddings automatically (fire-and-forget)
-- 768-dimension vectors stored in SQLite
+- New tasks and comments get embeddings automatically (fire-and-forget)
+- 768-dimension vectors live in a separate per-database `embeddings.db`
+  (git-ignored and fully rebuildable — `task sync` never uploads it)
 - Search uses cosine similarity to find related tasks
-- Works on task titles and descriptions
+- Works on task titles, descriptions, tags, and comments
+- Provider requests time out after 30 seconds, so a hung provider can't stall
+  search or backfill
