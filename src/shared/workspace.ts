@@ -8,6 +8,7 @@ import { copy, ensureDir, exists } from "@std/fs";
 import { join } from "@std/path";
 import type { TaskFull } from "./schemas.ts";
 import type { WorkConfig, WorkspaceTemplate } from "./config.ts";
+import { substitutePlaceholders } from "./templates.ts";
 
 const HOME = Deno.env.get("HOME") || ".";
 const TASK_CLI_DIR = join(HOME, ".task-cli");
@@ -285,22 +286,20 @@ function applyTemplateVariables(
   const subtasksMd = formatSubtasksMarkdown(task.subtasks);
   const commentsMd = formatCommentsMarkdown(task.comments);
 
-  return content
-    .replace(/\{\{task\.id\}\}/g, String(task.id))
-    .replace(/\{\{task\.title\}\}/g, task.title)
-    .replace(/\{\{task\.description\}\}/g, task.description || "")
-    .replace(
-      /\{\{task\.priority\}\}/g,
-      PRIORITY_LABELS[task.priority] || "Normal",
-    )
-    .replace(/\{\{task\.project\}\}/g, task.project_name || "")
-    .replace(/\{\{task\.due\}\}/g, task.due_date || "")
-    .replace(/\{\{task\.subtasks\}\}/g, subtasksMd)
-    .replace(/\{\{task\.comments\}\}/g, commentsMd)
-    .replace(/\{\{task\.json\}\}/g, JSON.stringify(task, null, 2))
-    .replace(/\{\{repo\.name\}\}/g, repoName)
-    .replace(/\{\{repo\.path\}\}/g, repoPath)
-    .replace(/\{\{date\}\}/g, date);
+  return substitutePlaceholders(content, {
+    "{{task.id}}": String(task.id),
+    "{{task.title}}": task.title,
+    "{{task.description}}": task.description || "",
+    "{{task.priority}}": PRIORITY_LABELS[task.priority] || "Normal",
+    "{{task.project}}": task.project_name || "",
+    "{{task.due}}": task.due_date || "",
+    "{{task.subtasks}}": subtasksMd,
+    "{{task.comments}}": commentsMd,
+    "{{task.json}}": JSON.stringify(task, null, 2),
+    "{{repo.name}}": repoName,
+    "{{repo.path}}": repoPath,
+    "{{date}}": date,
+  });
 }
 
 /**
@@ -370,8 +369,21 @@ async function copyExternalTemplate(
       await ensureDir(destPath);
       await copyExternalTemplate(srcPath, destPath, task, repoName);
     } else if (entry.isFile) {
+      // Deno.readTextFile decodes invalid UTF-8 lossily instead of throwing,
+      // so binariness must be detected with a fatal decoder — otherwise
+      // binary assets (images, archives) get corrupted by re-encoding.
+      const bytes = await Deno.readFile(srcPath);
+      let content: string | null = null;
       try {
-        const content = await Deno.readTextFile(srcPath);
+        content = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      } catch {
+        content = null;
+      }
+
+      if (content === null) {
+        // Binary file — copy bytes as-is
+        await Deno.writeFile(destPath, bytes);
+      } else {
         const processed = applyTemplateVariables(
           content,
           task,
@@ -379,9 +391,6 @@ async function copyExternalTemplate(
           targetDir,
         );
         await Deno.writeTextFile(destPath, processed);
-      } catch {
-        // Binary file — copy as-is
-        await copy(srcPath, destPath, { overwrite: true });
       }
     } else if (entry.isSymlink) {
       // Copy symlinks by resolving and copying the file

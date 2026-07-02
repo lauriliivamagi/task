@@ -11,6 +11,7 @@ import {
   type EmbeddingProvider,
   normalizeEmbedding,
 } from "./provider.ts";
+import { EMBEDDING_REQUEST_TIMEOUT_MS } from "../shared/limits.ts";
 
 const GEMINI_API_BASE =
   "https://generativelanguage.googleapis.com/v1beta/models";
@@ -45,6 +46,11 @@ export class GeminiEmbeddingProvider implements EmbeddingProvider {
     }
   }
 
+  get spaceId(): string {
+    // Output dimensionality changes the vector values, so it is part of the space
+    return `gemini:gemini-embedding-001:${this.outputDimensions}`;
+  }
+
   async embed(
     text: string,
     taskType: TaskType = "RETRIEVAL_DOCUMENT",
@@ -64,6 +70,7 @@ export class GeminiEmbeddingProvider implements EmbeddingProvider {
         taskType,
         outputDimensionality: this.outputDimensions,
       }),
+      signal: AbortSignal.timeout(EMBEDDING_REQUEST_TIMEOUT_MS),
     });
 
     if (!response.ok) {
@@ -97,6 +104,7 @@ export class GeminiEmbeddingProvider implements EmbeddingProvider {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ requests }),
+      signal: AbortSignal.timeout(EMBEDDING_REQUEST_TIMEOUT_MS),
     });
 
     if (!response.ok) {

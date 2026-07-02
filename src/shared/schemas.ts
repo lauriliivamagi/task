@@ -200,20 +200,27 @@ export const ReorderTaskInput = z.object({
 });
 export type ReorderTaskInput = z.infer<typeof ReorderTaskInput>;
 
+// Boolean query flags arrive as strings; z.coerce.boolean() would turn any
+// non-empty value (including "false") into true.
+const QueryBool = z
+  .union([z.boolean(), z.string()])
+  .transform((v) => v === true || v === "true" || v === "1");
+
 export const ListTasksQuery = z.object({
-  all: z.coerce.boolean().optional().default(false),
+  all: QueryBool.optional().default(false),
   project: z.string().optional(),
   // Search & filter options
   q: z.string().optional(),
   due_before: z.string().optional(),
   due_after: z.string().optional(),
-  overdue: z.coerce.boolean().optional(),
+  overdue: QueryBool.optional(),
   priority: z.coerce.number().min(0).max(2).optional(),
   status: TaskStatus.optional(),
   tag: z.string().optional(), // Filter by tag name
   // Semantic search
   semantic: z.string().optional(),
-  limit: z.coerce.number().min(1).max(100).optional().default(10),
+  // Applied to all listing; semantic search defaults to 10 when omitted
+  limit: z.coerce.number().min(1).max(100).optional(),
 });
 export type ListTasksQuery = z.infer<typeof ListTasksQuery>;
 

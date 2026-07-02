@@ -54,10 +54,14 @@ projectsRoute.delete("/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const db = await getDb();
 
-  await db.execute({
+  const deleteResult = await db.execute({
     sql: "DELETE FROM projects WHERE id = ?",
     args: [id],
   });
+
+  if (deleteResult.rowsAffected === 0) {
+    return c.json({ error: `Project #${id} not found` }, 404);
+  }
 
   return c.json({ deleted: true });
 });

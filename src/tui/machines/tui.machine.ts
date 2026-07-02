@@ -209,7 +209,13 @@ export const tuiMachine = setup({
                       );
                       if (idx >= 0) return idx;
                     }
-                    return 0;
+                    // Fallback: the previously selected task is gone (e.g.
+                    // marked done and filtered out) — stay near the old
+                    // position instead of jumping to the top
+                    return Math.max(
+                      0,
+                      Math.min(context.selectedIndex, event.output.length - 1),
+                    );
                   },
                 }),
               },
@@ -293,6 +299,19 @@ export const tuiMachine = setup({
         },
         loadingDetail: {
           on: {
+            // Re-target the in-flight detail load when the user keeps
+            // navigating. Dropping the event would desync the machine's
+            // selection from the visually highlighted row, making x/e/-
+            // act on the wrong task.
+            HIGHLIGHT_TASK: {
+              target: "loadingDetail",
+              reenter: true,
+              actions: assign({
+                selectedIndex: ({ context, event }) =>
+                  context.tasks.findIndex((t) => t.id === event.task.id),
+                pendingSelectTaskId: null,
+              }),
+            },
             // Allow reordering even while loading details
             MOVE_TASK_UP: {
               target: "reorderingTask",
@@ -1342,10 +1361,22 @@ export const tuiMachine = setup({
             onDone: {
               target: "normal.list",
               actions: [
-                assign({
-                  selectedTask: null,
-                  selectedIndex: ({ context }) =>
-                    Math.max(0, context.selectedIndex - 1),
+                // Select a neighbor of the deleted task after the refresh.
+                // selectedTask/lastSelectedTaskId point at the deleted task,
+                // so without pendingSelectTaskId the post-refresh selection
+                // reconciliation would fall through to the first task.
+                assign(({ context }) => {
+                  const deletedId = context.tasks[context.selectedIndex]?.id ??
+                    null;
+                  const neighbor = context.tasks[context.selectedIndex + 1] ??
+                    context.tasks[context.selectedIndex - 1] ?? null;
+                  return {
+                    selectedTask: null,
+                    pendingSelectTaskId: neighbor?.id ?? null,
+                    lastSelectedTaskId: context.lastSelectedTaskId === deletedId
+                      ? null
+                      : context.lastSelectedTaskId,
+                  };
                 }),
                 raise({ type: "REFRESH" }),
               ],

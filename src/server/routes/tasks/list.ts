@@ -149,6 +149,11 @@ listRoute.get(
 
     sql += " ORDER BY t.`order` ASC, t.created_at ASC";
 
+    if (limit !== undefined) {
+      sql += " LIMIT ?";
+      args.push(limit);
+    }
+
     const result = await db.execute({ sql, args });
     const parsedRows = parseTasksJsonFields(result.rows);
 

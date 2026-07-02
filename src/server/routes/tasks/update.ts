@@ -14,7 +14,7 @@ import { normalizeDateToDateTime } from "../../../shared/date-parser.ts";
 import { handleRecurringTaskCompletion } from "../../../shared/recurrence-handler.ts";
 import { syncTaskToCalendar } from "../../../gcal/sync.ts";
 import { logger } from "../../../shared/logger.ts";
-import { parseTaskJsonFields } from "./helpers.ts";
+import { parseTaskJsonFields, parseTasksJsonFields } from "./helpers.ts";
 
 export const updateRoute = new Hono();
 
@@ -90,7 +90,7 @@ updateRoute.patch(
     `;
 
     const result = await db.execute({ sql, args: [...args, ...ids] });
-    return c.json(result.rows);
+    return c.json(parseTasksJsonFields(result.rows));
   },
 );
 

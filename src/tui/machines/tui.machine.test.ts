@@ -1600,3 +1600,114 @@ Deno.test({
     );
   },
 });
+
+// === Selection Reconciliation Tests ===
+
+Deno.test({
+  name: "TUI Machine - Deleting a task selects its neighbor",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  fn: async () => {
+    const actor = createTestActor();
+    actor.start();
+
+    await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+    // Select the 3rd task
+    const before = actor.getSnapshot().context.tasks;
+    const victim = before[2];
+    const neighbor = before[3];
+    actor.send({ type: "HIGHLIGHT_TASK", task: victim });
+    await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+    actor.send({ type: "START_DELETE_TASK" });
+    actor.send({ type: "CONFIRM_DELETE" });
+
+    // Wait for delete + refresh + detail load to settle
+    await waitForState(
+      actor,
+      (state) => {
+        const snap = state as ReturnType<typeof actor.getSnapshot>;
+        return snap.matches({ data: "ready" }) &&
+          !snap.context.tasks.some((t) => t.id === victim.id);
+      },
+    );
+
+    const snapshot = actor.getSnapshot();
+    // Cursor stays on the deleted task's neighbor, not the first task
+    assertEquals(
+      snapshot.context.tasks[snapshot.context.selectedIndex]?.id,
+      neighbor.id,
+    );
+    assertEquals(snapshot.context.selectedTask?.id, neighbor.id);
+
+    actor.stop();
+  },
+});
+
+Deno.test({
+  name: "TUI Machine - HIGHLIGHT_TASK during detail load re-targets",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  fn: async () => {
+    const actor = createTestActor();
+    actor.start();
+
+    await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+    const tasks = actor.getSnapshot().context.tasks;
+    // Burst navigation: second highlight arrives while the first detail
+    // load is still in flight (loadingDetail)
+    actor.send({ type: "HIGHLIGHT_TASK", task: tasks[1] });
+    actor.send({ type: "HIGHLIGHT_TASK", task: tasks[2] });
+
+    await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+    const snapshot = actor.getSnapshot();
+    assertEquals(snapshot.context.selectedIndex, 2);
+    assertEquals(snapshot.context.selectedTask?.id, tasks[2].id);
+
+    actor.stop();
+  },
+});
+
+Deno.test({
+  name: "TUI Machine - Refresh clamps selection when selected task disappears",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  fn: async () => {
+    const client = new MockTaskClient();
+    const actor = createTestActor({ client });
+    actor.start();
+
+    await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+    const tasks = actor.getSnapshot().context.tasks;
+    const vanishing = tasks[2];
+    actor.send({ type: "HIGHLIGHT_TASK", task: vanishing });
+    await waitForState(actor, (state) => state.matches({ data: "ready" }));
+
+    // Task disappears server-side (e.g. completed and filtered out)
+    await client.deleteTask(vanishing.id);
+    actor.send({ type: "REFRESH" });
+
+    await waitForState(
+      actor,
+      (state) => {
+        const snap = state as ReturnType<typeof actor.getSnapshot>;
+        return snap.matches({ data: "ready" }) &&
+          !snap.context.tasks.some((t) => t.id === vanishing.id);
+      },
+    );
+
+    const snapshot = actor.getSnapshot();
+    // Selection stays near the old position instead of jumping to index 0
+    assertEquals(snapshot.context.selectedIndex, 2);
+    assertEquals(
+      snapshot.context.selectedTask?.id,
+      snapshot.context.tasks[2].id,
+    );
+
+    actor.stop();
+  },
+});

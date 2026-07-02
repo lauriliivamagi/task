@@ -10,6 +10,7 @@ import {
   type EmbeddingProvider,
   normalizeEmbedding,
 } from "./provider.ts";
+import { EMBEDDING_REQUEST_TIMEOUT_MS } from "../shared/limits.ts";
 
 const OPENAI_API_URL = "https://api.openai.com/v1/embeddings";
 
@@ -37,6 +38,10 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
     }
   }
 
+  get spaceId(): string {
+    return `openai:${this.model}`;
+  }
+
   async embed(text: string): Promise<number[]> {
     const embeddings = await this.embedBatch([text]);
     return embeddings[0];
@@ -55,6 +60,7 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
         // Request exact dimensions if model supports it (3-small does)
         dimensions: EMBEDDING_DIMENSIONS,
       }),
+      signal: AbortSignal.timeout(EMBEDDING_REQUEST_TIMEOUT_MS),
     });
 
     if (!response.ok) {

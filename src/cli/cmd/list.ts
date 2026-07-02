@@ -73,8 +73,7 @@ export const listCommand = {
       .option("limit", {
         alias: "n",
         type: "number",
-        default: 10,
-        describe: "Limit results (used with semantic search)",
+        describe: "Limit results (semantic search defaults to 10)",
       })
       .option("json", {
         type: "boolean",

@@ -239,3 +239,52 @@ Deno.test("getConfig - activeDb defaults to 'default'", async () => {
   assertEquals(typeof config.activeDb, "string");
   assertEquals(config.activeDb.length > 0, true);
 });
+
+// ============================================================================
+// Malformed config.json handling (subprocess: CONFIG_FILE derives from HOME
+// at module load, so a temp HOME must be set before import)
+// ============================================================================
+
+Deno.test("malformed config.json warns on load and blocks writes", async () => {
+  const tempHome = await Deno.makeTempDir();
+  try {
+    await Deno.mkdir(`${tempHome}/.task-cli`);
+    await Deno.writeTextFile(
+      `${tempHome}/.task-cli/config.json`,
+      '{"activeDb": "work",}', // trailing comma - invalid JSON
+    );
+
+    const moduleUrl = import.meta.resolve("./config.ts");
+    const script = `
+      import { getConfig, setActiveDb } from ${JSON.stringify(moduleUrl)};
+      const config = await getConfig();
+      let writeBlocked = false;
+      try {
+        await setActiveDb("other");
+      } catch {
+        writeBlocked = true;
+      }
+      console.log(JSON.stringify({ activeDb: config.activeDb, writeBlocked }));
+    `;
+    const command = new Deno.Command(Deno.execPath(), {
+      args: ["eval", script],
+      env: { HOME: tempHome },
+      stdout: "piped",
+      stderr: "piped",
+    });
+    const { code, stdout, stderr } = await command.output();
+    const errText = new TextDecoder().decode(stderr);
+    assertEquals(code, 0, `subprocess failed: ${errText}`);
+
+    const result = JSON.parse(new TextDecoder().decode(stdout).trim());
+    // Falls back to defaults, but warns visibly instead of silently
+    assertEquals(result.activeDb, "default");
+    assertEquals(errText.includes("invalid JSON"), true);
+    // Writes must not clobber the malformed file
+    assertEquals(result.writeBlocked, true);
+    const raw = await Deno.readTextFile(`${tempHome}/.task-cli/config.json`);
+    assertEquals(raw, '{"activeDb": "work",}');
+  } finally {
+    await Deno.remove(tempHome, { recursive: true });
+  }
+});

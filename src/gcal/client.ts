@@ -15,6 +15,20 @@ import { getGcalTokens, saveGcalTokens } from "./secrets.ts";
 
 const CALENDAR_API_BASE = "https://www.googleapis.com/calendar/v3";
 
+/**
+ * Calendar API failure carrying the HTTP status, so callers can react to
+ * specific statuses (404/410 for deleted events) without string matching.
+ */
+export class CalendarApiError extends Error {
+  constructor(
+    public readonly status: number,
+    body: string,
+  ) {
+    super(`Calendar API error (${status}): ${body}`);
+    this.name = "CalendarApiError";
+  }
+}
+
 export interface CalendarEvent {
   id?: string;
   summary: string;
@@ -108,7 +122,7 @@ async function apiRequest<T>(
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`Calendar API error (${response.status}): ${error}`);
+    throw new CalendarApiError(response.status, error);
   }
 
   // Handle 204 No Content
@@ -212,8 +226,11 @@ async function getEvent(
     );
     return result;
   } catch (error) {
-    // Return null for 404
-    if (String(error).includes("404")) {
+    // Google returns 404 for unknown events and 410 Gone for deleted ones
+    if (
+      error instanceof CalendarApiError &&
+      (error.status === 404 || error.status === 410)
+    ) {
       return null;
     }
     throw error;

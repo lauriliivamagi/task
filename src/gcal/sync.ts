@@ -14,13 +14,16 @@ import { type GcalConfig, getConfig } from "../shared/config.ts";
 import {
   DEFAULT_GCAL_DURATION_HOURS,
   MAX_GCAL_BATCH_SYNC,
+  MAX_GCAL_DURATION_HOURS,
 } from "../shared/limits.ts";
 import type { GcalSyncResponse } from "../shared/schemas.ts";
 import { isAuthenticated } from "./auth.ts";
 import {
   calculateEndTime,
+  CalendarApiError,
   type CalendarEvent,
   createGcalClient,
+  type GcalClient,
   getEventUrl,
 } from "./client.ts";
 
@@ -29,6 +32,9 @@ export interface SyncOptions {
   durationHours?: number;
   calendarId?: string;
   dueDate?: string; // ISO datetime override for tasks without due_date
+  /** Injectable dependencies for testing */
+  client?: GcalClient;
+  checkAuth?: () => Promise<boolean>;
 }
 
 export interface SyncResult {
@@ -70,8 +76,25 @@ export async function syncTaskToCalendar(
 
   assertPositive(taskId, "Task ID must be positive", "gcal");
 
+  // Bound the event duration before doing any work: a negative duration ends
+  // the event before it starts (opaque Google 400), a huge one creates a
+  // multi-day event.
+  if (
+    options.durationHours !== undefined &&
+    (!Number.isFinite(options.durationHours) ||
+      options.durationHours <= 0 ||
+      options.durationHours > MAX_GCAL_DURATION_HOURS)
+  ) {
+    return {
+      success: false,
+      error:
+        `Invalid duration: ${options.durationHours}. Must be between 0 and ${MAX_GCAL_DURATION_HOURS} hours.`,
+      action: "skipped",
+    };
+  }
+
   // Check authentication
-  const authenticated = await isAuthenticated();
+  const authenticated = await (options.checkAuth ?? isAuthenticated)();
   if (!authenticated) {
     return {
       success: false,
@@ -154,7 +177,7 @@ export async function syncTaskToCalendar(
     },
   };
 
-  const client = createGcalClient();
+  const client = options.client ?? createGcalClient();
 
   try {
     let resultEvent: CalendarEvent;
@@ -163,8 +186,27 @@ export async function syncTaskToCalendar(
     if (gcalEventId) {
       // Update existing event
       logger.info(`Updating event ${gcalEventId} for task ${taskId}`, "gcal");
-      resultEvent = await client.updateEvent(calendarId, gcalEventId, event);
-      action = "updated";
+      try {
+        resultEvent = await client.updateEvent(calendarId, gcalEventId, event);
+        action = "updated";
+      } catch (error) {
+        // The stored event was deleted in Google Calendar (404/410).
+        // Without recovery the task is stuck forever updating a dead event.
+        if (
+          error instanceof CalendarApiError &&
+          (error.status === 404 || error.status === 410)
+        ) {
+          logger.warn(
+            `Event ${gcalEventId} no longer exists, creating a new one`,
+            "gcal",
+            { taskId },
+          );
+          resultEvent = await client.createEvent(calendarId, event);
+          action = "created";
+        } else {
+          throw error;
+        }
+      }
     } else {
       // Create new event
       logger.info(`Creating event for task ${taskId}`, "gcal");

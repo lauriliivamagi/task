@@ -243,6 +243,7 @@ task db current          # Show active database
 | `src/tui/app.test.tsx`                 | E2E         | TUI with ink-testing-library   |
 | `src/tui/tui-state.test.ts`            | Unit        | TUI state persistence          |
 | `src/embeddings/embeddings_test.ts`    | Unit        | Embedding providers            |
+| `src/gcal/sync_test.ts`                | Unit        | Calendar sync (fake client)    |
 | `tests/cli_test.ts`                    | E2E         | CLI subprocess tests           |
 
 ### Test Isolation
@@ -631,10 +632,13 @@ One-way sync: tasks → calendar events. Changes in Calendar NOT synced back.
 
 **Behavior:**
 
+- `task gcal sync` goes through the API client (`runWithClient`), so
+  `--attach <url>` syncs against the attached server
 - Task `due_date` becomes event start
-- Default 1 hour duration
+- Default 1 hour duration; bounded to 0-24h (`MAX_GCAL_DURATION_HOURS`)
 - `gcal_event_id` stored on task
-- Re-sync updates existing event
+- Re-sync updates existing event; if the event was deleted in Google Calendar
+  (404/410), a fresh event is created and the task re-linked
 - Recurring task completion auto-syncs new task
 
 ### Embeddings
@@ -657,6 +661,16 @@ column — keeping the synced backup small — while `emb.task_embeddings` and
 `emb.comment_embeddings` hold the vectors. `embeddings.db` is git-ignored and
 fully rebuildable via `task embeddings backfill`. `migrateEmbeddingStorageOn`
 moves any legacy in-`data.db` embedding column into `embeddings.db` on startup.
+
+Because `emb` is a separately attached database, foreign-key cascades can't
+reach it — the task/comment delete routes remove embeddings explicitly
+(best-effort), and the task vector search joins `tasks` to filter any orphans.
+Provider HTTP requests are bounded by `EMBEDDING_REQUEST_TIMEOUT_MS` (30s).
+
+**Vector-space guard:** every provider exposes a `spaceId` (provider + model),
+recorded in `emb.embedding_meta`. Switching providers/models clears the stored
+vectors on next use (they'd be incomparable) and warns to run
+`task embeddings backfill`.
 
 ### Git Sync
 
@@ -695,6 +709,11 @@ Git-based backup and replication of `~/.task-cli/`.
 
 **Query parameters for GET /tasks:** `q`, `status`, `priority`, `overdue`,
 `due_before`, `due_after`, `project`, `tag`, `all`, `semantic`, `limit`
+
+- `limit` (1-100) applies to all listing; semantic search defaults to 10 when
+  omitted, normal listing is unlimited when omitted.
+- Boolean flags (`all`, `overdue`) accept `true`/`1`; anything else is false.
+- `DELETE` endpoints return 404 when the resource doesn't exist.
 
 ### Other Endpoints
 

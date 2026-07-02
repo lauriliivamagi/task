@@ -79,12 +79,14 @@ attachmentsRoute.delete("/:id", async (c) => {
     args: [id],
   });
 
-  if (attachmentResult.rows.length > 0) {
-    try {
-      await Deno.remove(attachmentResult.rows[0].path as string);
-    } catch {
-      // File may not exist, continue with db deletion
-    }
+  if (attachmentResult.rows.length === 0) {
+    return c.json({ error: `Attachment #${id} not found` }, 404);
+  }
+
+  try {
+    await Deno.remove(attachmentResult.rows[0].path as string);
+  } catch {
+    // File may not exist, continue with db deletion
   }
 
   await db.execute({

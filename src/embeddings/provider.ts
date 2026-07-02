@@ -19,6 +19,13 @@ export interface EmbeddingProvider {
 
   /** Provider name for logging/debugging */
   readonly name: string;
+
+  /**
+   * Identifier of the vector space these embeddings live in (provider +
+   * model). Distances between embeddings from different spaces are
+   * meaningless, so stored vectors must never mix spaces.
+   */
+  readonly spaceId: string;
 }
 
 export type ProviderType = "openai" | "ollama" | "gemini";

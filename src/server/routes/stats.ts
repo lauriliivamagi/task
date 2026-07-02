@@ -59,7 +59,7 @@ statsRoute.get("/", async (c) => {
   const overdueResult = await db.execute(`
     SELECT COUNT(*) as count
     FROM tasks
-    WHERE due_date < date('now') AND status != 'done'
+    WHERE due_date < datetime('now') AND status != 'done'
   `);
   const overdue = Number(overdueResult.rows[0].count);
 

@@ -1343,6 +1343,153 @@ Deno.test({
         assertEquals(deleted, undefined);
       });
 
+      // === Query param semantics ===
+
+      await t.step("List applies limit to normal listing", async () => {
+        const data = await apiOk<TaskWithProject[]>(
+          "GET",
+          "/tasks?all=true&limit=1",
+        );
+        assertEquals(data.length, 1);
+      });
+
+      await t.step("List treats all=false as false", async () => {
+        const doneTask = await apiCreated<Task>("POST", "/tasks", {
+          title: "Boolean coercion probe",
+        });
+        await apiOk("PATCH", `/tasks/${doneTask.id}`, { status: "done" });
+
+        const withoutAll = await apiOk<TaskWithProject[]>(
+          "GET",
+          "/tasks?all=false",
+        );
+        assertEquals(
+          withoutAll.find((t) => t.id === doneTask.id),
+          undefined,
+        );
+
+        const withAll = await apiOk<TaskWithProject[]>(
+          "GET",
+          "/tasks?all=true",
+        );
+        assertExists(withAll.find((t) => t.id === doneTask.id));
+
+        await apiOk("DELETE", `/tasks/${doneTask.id}`);
+      });
+
+      await t.step("List treats overdue=false as false", async () => {
+        const noDueDate = await apiCreated<Task>("POST", "/tasks", {
+          title: "No due date task",
+        });
+
+        // overdue=false must NOT enable the overdue filter, so a task
+        // without a due date still shows up
+        const data = await apiOk<TaskWithProject[]>(
+          "GET",
+          "/tasks?overdue=false",
+        );
+        assertExists(data.find((t) => t.id === noDueDate.id));
+
+        await apiOk("DELETE", `/tasks/${noDueDate.id}`);
+      });
+
+      // === Bulk update response shape ===
+
+      await t.step(
+        "Bulk update returns parsed recurrence objects",
+        async () => {
+          const recurring = await apiCreated<Task>("POST", "/tasks", {
+            title: "Bulk shape probe",
+            recurrence: { type: "daily", interval: 1 },
+          });
+
+          const updated = await apiOk<Task[]>("PATCH", "/tasks/bulk", {
+            ids: [recurring.id],
+            update: { priority: 1 },
+          });
+          assertEquals(updated.length, 1);
+          assertEquals(typeof updated[0].recurrence, "object");
+          assertEquals(updated[0].recurrence?.type, "daily");
+
+          await apiOk("DELETE", `/tasks/${recurring.id}`);
+        },
+      );
+
+      // === Delete semantics ===
+
+      await t.step("Deleting missing resources returns 404", async () => {
+        assertEquals((await api("DELETE", "/tasks/999999")).status, 404);
+        assertEquals((await api("DELETE", "/projects/999999")).status, 404);
+        assertEquals((await api("DELETE", "/tags/999999")).status, 404);
+        assertEquals(
+          (await api("DELETE", "/tasks/1/comments/999999")).status,
+          404,
+        );
+        assertEquals(
+          (await api("DELETE", "/tasks/1/attachments/999999")).status,
+          404,
+        );
+      });
+
+      await t.step("Bulk delete cascades subtasks", async () => {
+        const parent = await apiCreated<Task>("POST", "/tasks", {
+          title: "Bulk delete parent",
+        });
+        const child = await apiCreated<Task>("POST", "/tasks", {
+          title: "Bulk delete child",
+          parent_id: parent.id,
+        });
+
+        const data = await apiOk<{ deleted: number }>("DELETE", "/tasks/bulk", {
+          ids: [parent.id],
+        });
+        assertEquals(data.deleted, 2);
+
+        assertEquals((await api("GET", `/tasks/${parent.id}`)).status, 404);
+        assertEquals((await api("GET", `/tasks/${child.id}`)).status, 404);
+      });
+
+      await t.step("Task delete removes orphaned embeddings", async () => {
+        const embedded = await apiCreated<Task>("POST", "/tasks", {
+          title: "Embedding cleanup probe",
+        });
+        const comment = await apiCreated<{ id: number }>(
+          "POST",
+          `/tasks/${embedded.id}/comments`,
+          { content: "with embedding" },
+        );
+
+        // Plant fake vectors directly (no embedding provider in tests)
+        const db = await getDb();
+        const fakeVector = new Uint8Array(768 * 4);
+        await db.execute({
+          sql:
+            "INSERT INTO emb.task_embeddings (task_id, embedding) VALUES (?, ?)",
+          args: [embedded.id, fakeVector],
+        });
+        await db.execute({
+          sql:
+            "INSERT INTO emb.comment_embeddings (comment_id, embedding) VALUES (?, ?)",
+          args: [comment.id, fakeVector],
+        });
+
+        await apiOk("DELETE", `/tasks/${embedded.id}`);
+
+        const taskEmb = await db.execute({
+          sql:
+            "SELECT COUNT(*) as count FROM emb.task_embeddings WHERE task_id = ?",
+          args: [embedded.id],
+        });
+        assertEquals(Number(taskEmb.rows[0].count), 0);
+
+        const commentEmb = await db.execute({
+          sql:
+            "SELECT COUNT(*) as count FROM emb.comment_embeddings WHERE comment_id = ?",
+          args: [comment.id],
+        });
+        assertEquals(Number(commentEmb.rows[0].count), 0);
+      });
+
       // === Cleanup (in FK-safe order: subtasks first, then parent, then project) ===
 
       await t.step("Delete subtask first (FK safe)", async () => {

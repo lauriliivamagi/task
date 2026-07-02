@@ -401,6 +401,88 @@ Deno.test("createWorkspace - external template copies files and excludes .git", 
   }
 });
 
+Deno.test("createWorkspace - external template preserves binary files", async () => {
+  const tempDir = await Deno.makeTempDir();
+  const templateDir = join(tempDir, "template");
+  const reposDir = join(tempDir, "repos");
+
+  try {
+    await ensureDir(templateDir);
+    // Invalid UTF-8: a lossy text round-trip would corrupt these bytes
+    const binaryBytes = new Uint8Array([
+      0x89,
+      0x50,
+      0x4e,
+      0x47,
+      0xff,
+      0xfe,
+      0x00,
+      0x01,
+      0xc3,
+      0x28,
+    ]);
+    await Deno.writeFile(join(templateDir, "logo.png"), binaryBytes);
+    await Deno.writeTextFile(join(templateDir, "note.md"), "# {{task.title}}");
+
+    const result = await createWorkspace({
+      task: mockTask,
+      template: "Bin Template",
+      noOpen: true,
+      config: {
+        repos_dir: reposDir,
+        default_template: "default",
+        ide_command: "echo",
+        naming: "{{task.id}}-{{task.slug}}",
+        auto_commit: true,
+        templates: [{ name: "Bin Template", path: templateDir }],
+      },
+    });
+
+    const copied = await Deno.readFile(join(result.path, "logo.png"));
+    assertEquals(copied, binaryBytes);
+
+    // Text files still get substitution
+    const note = await Deno.readTextFile(join(result.path, "note.md"));
+    assertEquals(note, "# Fix authentication bug");
+  } finally {
+    await Deno.remove(tempDir, { recursive: true });
+  }
+});
+
+Deno.test("createWorkspace - task fields cannot inject template placeholders", async () => {
+  const tempDir = await Deno.makeTempDir();
+  const templateDir = join(tempDir, "template");
+  const reposDir = join(tempDir, "repos");
+
+  try {
+    await ensureDir(templateDir);
+    await Deno.writeTextFile(
+      join(templateDir, "README.md"),
+      "Title: {{task.title}}",
+    );
+
+    const result = await createWorkspace({
+      task: { ...mockTask, title: "See {{task.json}} for details" },
+      template: "Inject Template",
+      noOpen: true,
+      config: {
+        repos_dir: reposDir,
+        default_template: "default",
+        ide_command: "echo",
+        naming: "{{task.id}}-{{task.slug}}",
+        auto_commit: true,
+        templates: [{ name: "Inject Template", path: templateDir }],
+      },
+    });
+
+    // The placeholder inside the title must stay literal, not expand
+    const readme = await Deno.readTextFile(join(result.path, "README.md"));
+    assertEquals(readme, "Title: See {{task.json}} for details");
+  } finally {
+    await Deno.remove(tempDir, { recursive: true });
+  }
+});
+
 Deno.test("createWorkspace - external template not found throws error", async () => {
   const tempDir = await Deno.makeTempDir();
   const reposDir = join(tempDir, "repos");

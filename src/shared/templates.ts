@@ -166,6 +166,21 @@ function formatContext(context: unknown): string {
 }
 
 /**
+ * Replace {{placeholder}} tokens in a single pass so substituted values are
+ * never re-scanned — a task title containing "{{json}}" must stay literal
+ * instead of expanding into the full task dump.
+ */
+export function substitutePlaceholders(
+  content: string,
+  replacements: Record<string, string>,
+): string {
+  return content.replace(
+    /\{\{[^{}]+\}\}/g,
+    (match) => Object.hasOwn(replacements, match) ? replacements[match] : match,
+  );
+}
+
+/**
  * Render a template with task data
  */
 export function renderTemplate(template: string, task: TaskFull): string {
@@ -183,12 +198,7 @@ export function renderTemplate(template: string, task: TaskFull): string {
     "{{json}}": JSON.stringify(task, null, 2),
   };
 
-  let result = template;
-  for (const [placeholder, value] of Object.entries(replacements)) {
-    result = result.replaceAll(placeholder, value);
-  }
-
-  return result;
+  return substitutePlaceholders(template, replacements);
 }
 
 /**

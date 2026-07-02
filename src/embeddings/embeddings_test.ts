@@ -27,6 +27,8 @@ class MockEmbeddingProvider implements EmbeddingProvider {
   readonly dimensions = EMBEDDING_DIMENSIONS;
   private callCount = 0;
 
+  constructor(readonly spaceId: string = "mock:v1") {}
+
   embed(text: string): Promise<number[]> {
     this.callCount++;
     // Generate deterministic embedding based on text hash
@@ -549,6 +551,102 @@ Deno.test("Embeddings live in a separate attached database", async (t) => {
       );
       assertEquals(Number(r.rows[0].n), 2);
     });
+  } finally {
+    Deno.env.delete("TASK_CLI_DB_URL");
+    resetDbClient();
+  }
+});
+
+Deno.test("Vector space consistency", async (t) => {
+  resetDbClient();
+  Deno.env.set("TASK_CLI_DB_URL", ":memory:");
+
+  try {
+    const db = await initDb();
+    await migrateEmbeddingStorageOn(db);
+
+    const countVectors = async (): Promise<number> => {
+      const result = await db.execute(
+        `SELECT (SELECT COUNT(*) FROM emb.task_embeddings) +
+                (SELECT COUNT(*) FROM emb.comment_embeddings) AS total`,
+      );
+      return Number(result.rows[0].total);
+    };
+
+    await t.step("first init records the vector space", async () => {
+      const service = new EmbeddingService(
+        undefined,
+        new MockEmbeddingProvider("mock:model-a"),
+      );
+      assertEquals(await service.isAvailable(), true);
+
+      const meta = await db.execute(
+        "SELECT value FROM emb.embedding_meta WHERE key = 'space'",
+      );
+      assertEquals(meta.rows[0].value, "mock:model-a");
+    });
+
+    await t.step("same provider keeps existing vectors", async () => {
+      await db.execute({
+        sql:
+          "INSERT INTO emb.task_embeddings (task_id, embedding) VALUES (1, ?)",
+        args: [new Uint8Array(EMBEDDING_DIMENSIONS * 4)],
+      });
+
+      const service = new EmbeddingService(
+        undefined,
+        new MockEmbeddingProvider("mock:model-a"),
+      );
+      assertEquals(await service.isAvailable(), true);
+      assertEquals(await countVectors(), 1);
+    });
+
+    await t.step("provider switch clears stale vectors", async () => {
+      await db.execute({
+        sql:
+          "INSERT INTO emb.comment_embeddings (comment_id, embedding) VALUES (1, ?)",
+        args: [new Uint8Array(EMBEDDING_DIMENSIONS * 4)],
+      });
+      assertEquals(await countVectors(), 2);
+
+      const service = new EmbeddingService(
+        undefined,
+        new MockEmbeddingProvider("mock:model-b"),
+      );
+      assertEquals(await service.isAvailable(), true);
+
+      // Incomparable vectors are gone; meta reflects the new space
+      assertEquals(await countVectors(), 0);
+      const meta = await db.execute(
+        "SELECT value FROM emb.embedding_meta WHERE key = 'space'",
+      );
+      assertEquals(meta.rows[0].value, "mock:model-b");
+    });
+
+    await t.step(
+      "legacy vectors without meta are adopted, not wiped",
+      async () => {
+        // Simulate a pre-tracking database: vectors exist but no meta row
+        await db.execute("DELETE FROM emb.embedding_meta");
+        await db.execute({
+          sql:
+            "INSERT INTO emb.task_embeddings (task_id, embedding) VALUES (2, ?)",
+          args: [new Uint8Array(EMBEDDING_DIMENSIONS * 4)],
+        });
+
+        const service = new EmbeddingService(
+          undefined,
+          new MockEmbeddingProvider("mock:model-c"),
+        );
+        assertEquals(await service.isAvailable(), true);
+
+        assertEquals(await countVectors(), 1);
+        const meta = await db.execute(
+          "SELECT value FROM emb.embedding_meta WHERE key = 'space'",
+        );
+        assertEquals(meta.rows[0].value, "mock:model-c");
+      },
+    );
   } finally {
     Deno.env.delete("TASK_CLI_DB_URL");
     resetDbClient();

@@ -114,7 +114,21 @@ async function loadConfigFile(): Promise<Partial<Config>> {
 
   try {
     const content = await Deno.readTextFile(CONFIG_FILE);
-    const parsed = JSON.parse(content);
+    // deno-lint-ignore no-explicit-any
+    let parsed: any;
+    try {
+      parsed = JSON.parse(content);
+    } catch (error) {
+      // A malformed config silently falling back to defaults would switch
+      // activeDb back to "default" — the user's tasks would appear gone.
+      // Warn loudly so a config typo is visible.
+      console.error(
+        `Warning: ${CONFIG_FILE} contains invalid JSON (${
+          String(error)
+        }). Using default settings, including activeDb="default".`,
+      );
+      return {};
+    }
 
     const config: Partial<Config> = {};
 
@@ -291,18 +305,34 @@ export function resetConfig(): void {
 }
 
 /**
+ * Read config.json for a read-modify-write update.
+ * A missing file starts fresh; a malformed file throws instead of being
+ * silently replaced (which would destroy the user's other settings).
+ */
+async function readConfigForWrite(): Promise<Record<string, unknown>> {
+  let content: string;
+  try {
+    content = await Deno.readTextFile(CONFIG_FILE);
+  } catch {
+    return {}; // File doesn't exist yet - start fresh
+  }
+  try {
+    return JSON.parse(content);
+  } catch (error) {
+    throw new Error(
+      `Refusing to overwrite ${CONFIG_FILE}: it contains invalid JSON (${
+        String(error)
+      }). Fix or delete the file, then retry.`,
+    );
+  }
+}
+
+/**
  * Set the active database and persist to config file.
  * Updates both the cached config and the file on disk.
  */
 export async function setActiveDb(name: string): Promise<void> {
-  // Read current config file
-  let currentConfig: Record<string, unknown> = {};
-  try {
-    const content = await Deno.readTextFile(CONFIG_FILE);
-    currentConfig = JSON.parse(content);
-  } catch {
-    // File doesn't exist or is invalid - start fresh
-  }
+  const currentConfig = await readConfigForWrite();
 
   // Update activeDb
   currentConfig.activeDb = name;
@@ -338,14 +368,7 @@ export function getDatabaseDir(name: string): string {
  * Set the Google Calendar ID and persist to config file.
  */
 export async function setGcalCalendarId(calendarId: string): Promise<void> {
-  // Read current config file
-  let currentConfig: Record<string, unknown> = {};
-  try {
-    const content = await Deno.readTextFile(CONFIG_FILE);
-    currentConfig = JSON.parse(content);
-  } catch {
-    // File doesn't exist or is invalid - start fresh
-  }
+  const currentConfig = await readConfigForWrite();
 
   // Update gcal config
   if (!currentConfig.gcal || typeof currentConfig.gcal !== "object") {

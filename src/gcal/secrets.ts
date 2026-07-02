@@ -29,6 +29,48 @@ interface SecretsFile {
 }
 
 /**
+ * Read the secrets file, tolerating a missing or invalid file.
+ */
+async function readSecrets(): Promise<SecretsFile> {
+  try {
+    const content = await Deno.readTextFile(SECRETS_FILE);
+    return JSON.parse(content);
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Write the secrets file with owner-only permissions.
+ * The mode is passed to the write itself so the file is never observable
+ * with default (world-readable) permissions, even for an instant.
+ */
+async function writeSecrets(secrets: SecretsFile): Promise<void> {
+  await ensureDir(CONFIG_DIR);
+  try {
+    await Deno.writeTextFile(
+      SECRETS_FILE,
+      JSON.stringify(secrets, null, 2) + "\n",
+      { mode: 0o600 },
+    );
+  } catch (error) {
+    // mode is unsupported on some platforms (e.g. Windows) - retry without
+    if (error instanceof Deno.errors.NotSupported) {
+      await Deno.writeTextFile(
+        SECRETS_FILE,
+        JSON.stringify(secrets, null, 2) + "\n",
+      );
+      logger.warn(
+        "Could not set restrictive permissions on secrets file",
+        "gcal",
+      );
+    } else {
+      throw error;
+    }
+  }
+}
+
+/**
  * Get Google Calendar OAuth tokens from secrets file.
  * Returns null if not authenticated.
  */
@@ -48,37 +90,9 @@ export async function getGcalTokens(): Promise<GcalTokens | null> {
  * Creates the file if it doesn't exist.
  */
 export async function saveGcalTokens(tokens: GcalTokens): Promise<void> {
-  await ensureDir(CONFIG_DIR);
-
-  // Read existing secrets
-  let secrets: SecretsFile = {};
-  try {
-    const content = await Deno.readTextFile(SECRETS_FILE);
-    secrets = JSON.parse(content);
-  } catch {
-    // File doesn't exist or is invalid - start fresh
-  }
-
-  // Update gcal tokens
+  const secrets = await readSecrets();
   secrets.gcal = tokens;
-
-  // Write back to file with restrictive permissions
-  await Deno.writeTextFile(
-    SECRETS_FILE,
-    JSON.stringify(secrets, null, 2) + "\n",
-  );
-
-  // Set file permissions to 600 (owner read/write only)
-  try {
-    await Deno.chmod(SECRETS_FILE, 0o600);
-  } catch {
-    // chmod may fail on some systems (e.g., Windows)
-    logger.warn(
-      "Could not set restrictive permissions on secrets file",
-      "gcal",
-    );
-  }
-
+  await writeSecrets(secrets);
   logger.info("Saved Google Calendar tokens", "gcal");
 }
 
@@ -92,10 +106,7 @@ export async function clearGcalTokens(): Promise<void> {
     delete secrets.gcal;
 
     // Write back without gcal tokens
-    await Deno.writeTextFile(
-      SECRETS_FILE,
-      JSON.stringify(secrets, null, 2) + "\n",
-    );
+    await writeSecrets(secrets);
 
     logger.info("Cleared Google Calendar tokens", "gcal");
   } catch {
@@ -133,37 +144,9 @@ export async function getGcalCredentials(): Promise<GcalCredentials | null> {
 export async function saveGcalCredentials(
   credentials: GcalCredentials,
 ): Promise<void> {
-  await ensureDir(CONFIG_DIR);
-
-  // Read existing secrets
-  let secrets: SecretsFile = {};
-  try {
-    const content = await Deno.readTextFile(SECRETS_FILE);
-    secrets = JSON.parse(content);
-  } catch {
-    // File doesn't exist or is invalid - start fresh
-  }
-
-  // Update credentials
+  const secrets = await readSecrets();
   secrets.gcal_credentials = credentials;
-
-  // Write back to file with restrictive permissions
-  await Deno.writeTextFile(
-    SECRETS_FILE,
-    JSON.stringify(secrets, null, 2) + "\n",
-  );
-
-  // Set file permissions to 600 (owner read/write only)
-  try {
-    await Deno.chmod(SECRETS_FILE, 0o600);
-  } catch {
-    // chmod may fail on some systems (e.g., Windows)
-    logger.warn(
-      "Could not set restrictive permissions on secrets file",
-      "gcal",
-    );
-  }
-
+  await writeSecrets(secrets);
   logger.info("Saved Google Calendar credentials", "gcal");
 }
 

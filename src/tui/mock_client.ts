@@ -205,7 +205,9 @@ export class MockTaskClient implements ITaskClient {
     const maxOrder = Math.max(...this.tasks.map((t) => t.order), -1);
 
     const newTask: TaskFull = {
-      id: this.tasks.length + 1,
+      // Autoincrement like the real server: array length would reuse ids
+      // after a delete, silently selecting/acting on the wrong task
+      id: Math.max(...this.tasks.map((t) => t.id), 0) + 1,
       title: input.title,
       description: input.description || null,
       project_id: null, // Simplified

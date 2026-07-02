@@ -11,6 +11,7 @@ import {
   type EmbeddingProvider,
   normalizeEmbedding,
 } from "./provider.ts";
+import { EMBEDDING_REQUEST_TIMEOUT_MS } from "../shared/limits.ts";
 
 interface OllamaEmbeddingResponse {
   embedding: number[];
@@ -25,6 +26,10 @@ export class OllamaEmbeddingProvider implements EmbeddingProvider {
     private model: string = "nomic-embed-text",
   ) {}
 
+  get spaceId(): string {
+    return `ollama:${this.model}`;
+  }
+
   async embed(text: string): Promise<number[]> {
     const url = `${this.baseUrl}/api/embeddings`;
 
@@ -37,6 +42,7 @@ export class OllamaEmbeddingProvider implements EmbeddingProvider {
         model: this.model,
         prompt: text,
       }),
+      signal: AbortSignal.timeout(EMBEDDING_REQUEST_TIMEOUT_MS),
     });
 
     if (!response.ok) {

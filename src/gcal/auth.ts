@@ -163,62 +163,66 @@ export async function startAuthFlow(): Promise<GcalTokens> {
     rejectCode = reject;
   });
 
-  // Start local server to receive callback
-  const server = Deno.serve({ port, onListen: () => {} }, (req) => {
-    const url = new URL(req.url);
+  // Start local server to receive callback. Bind loopback only: the redirect
+  // URI is localhost, so exposing the endpoint to the LAN gains nothing.
+  const server = Deno.serve(
+    { port, hostname: "127.0.0.1", onListen: () => {} },
+    (req) => {
+      const url = new URL(req.url);
 
-    if (url.pathname === "/callback") {
-      const code = url.searchParams.get("code");
-      const returnedState = url.searchParams.get("state");
-      const error = url.searchParams.get("error");
+      if (url.pathname === "/callback") {
+        const code = url.searchParams.get("code");
+        const returnedState = url.searchParams.get("state");
+        const error = url.searchParams.get("error");
 
-      if (error) {
-        rejectCode(new GcalAuthError(`Authorization failed: ${error}`));
+        if (error) {
+          rejectCode(new GcalAuthError(`Authorization failed: ${error}`));
+          return new Response(
+            htmlResponse(
+              "Authorization Failed",
+              `Error: ${error}. You can close this window.`,
+            ),
+            { headers: { "Content-Type": "text/html" } },
+          );
+        }
+
+        if (returnedState !== state) {
+          rejectCode(
+            new GcalAuthError("Invalid state parameter (CSRF protection)"),
+          );
+          return new Response(
+            htmlResponse(
+              "Authorization Failed",
+              "Invalid state. You can close this window.",
+            ),
+            { headers: { "Content-Type": "text/html" } },
+          );
+        }
+
+        if (!code) {
+          rejectCode(new GcalAuthError("No authorization code received"));
+          return new Response(
+            htmlResponse(
+              "Authorization Failed",
+              "No code received. You can close this window.",
+            ),
+            { headers: { "Content-Type": "text/html" } },
+          );
+        }
+
+        resolveCode(code);
         return new Response(
           htmlResponse(
-            "Authorization Failed",
-            `Error: ${error}. You can close this window.`,
+            "Authorization Successful",
+            "You can close this window and return to the terminal.",
           ),
           { headers: { "Content-Type": "text/html" } },
         );
       }
 
-      if (returnedState !== state) {
-        rejectCode(
-          new GcalAuthError("Invalid state parameter (CSRF protection)"),
-        );
-        return new Response(
-          htmlResponse(
-            "Authorization Failed",
-            "Invalid state. You can close this window.",
-          ),
-          { headers: { "Content-Type": "text/html" } },
-        );
-      }
-
-      if (!code) {
-        rejectCode(new GcalAuthError("No authorization code received"));
-        return new Response(
-          htmlResponse(
-            "Authorization Failed",
-            "No code received. You can close this window.",
-          ),
-          { headers: { "Content-Type": "text/html" } },
-        );
-      }
-
-      resolveCode(code);
-      return new Response(
-        htmlResponse(
-          "Authorization Successful",
-          "You can close this window and return to the terminal.",
-        ),
-        { headers: { "Content-Type": "text/html" } },
-      );
-    }
-
-    return new Response("Not found", { status: 404 });
-  });
+      return new Response("Not found", { status: 404 });
+    },
+  );
 
   // Open browser
   console.log("\nOpening browser for Google Calendar authorization...");

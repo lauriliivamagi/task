@@ -24,6 +24,7 @@
     "npm:ink-text-input@6": "6.0.0_ink@6.8.0__@types+react@19.2.15__react@19.2.6_react@19.2.6_@types+react@19.2.15",
     "npm:ink@^6.5.1": "6.8.0_@types+react@19.2.15_react@19.2.6",
     "npm:react@^19.2.0": "19.2.6",
+    "npm:rrule@2.8.1": "2.8.1",
     "npm:rrule@^2.8.1": "2.8.1",
     "npm:xstate@^5.24.0": "5.32.0",
     "npm:yargs@^17.7.0": "17.7.2",

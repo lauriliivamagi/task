@@ -223,3 +223,29 @@ Deno.test("filtering done tasks works", async () => {
   });
   assertEquals(allResult.rows.length, 2);
 });
+
+Deno.test("getDb closes the previous client when the URL changes", async () => {
+  const { getDb, resetDbClient } = await import("./client.ts");
+  const originalUrl = Deno.env.get("TASK_CLI_DB_URL");
+  const tempDir = await Deno.makeTempDir();
+  resetDbClient();
+  try {
+    Deno.env.set("TASK_CLI_DB_URL", `file:${tempDir}/a.db`);
+    const first = await getDb();
+
+    Deno.env.set("TASK_CLI_DB_URL", `file:${tempDir}/b.db`);
+    const second = await getDb();
+
+    assertEquals(first === second, false);
+    assertEquals(first.closed, true);
+    assertEquals(second.closed, false);
+  } finally {
+    if (originalUrl === undefined) {
+      Deno.env.delete("TASK_CLI_DB_URL");
+    } else {
+      Deno.env.set("TASK_CLI_DB_URL", originalUrl);
+    }
+    resetDbClient();
+    await Deno.remove(tempDir, { recursive: true });
+  }
+});

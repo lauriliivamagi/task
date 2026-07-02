@@ -75,6 +75,19 @@ export const commentEmbeddingsIndex = `
 `;
 
 /**
+ * Metadata about the stored embeddings, keyed strings. Currently holds
+ * "space" — the provider+model identifier the vectors were generated with —
+ * so a provider switch can be detected instead of silently mixing
+ * incompatible vector spaces.
+ */
+export const embeddingMetaTable = `
+  CREATE TABLE IF NOT EXISTS emb.embedding_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+`;
+
+/**
  * Migration to add context column to tasks table.
  * Stores JSON blob for AI agent context (files, urls, git, etc.)
  */

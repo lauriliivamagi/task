@@ -6,6 +6,7 @@ import {
   completedAtMigration,
   contextMigration,
   durationMigration,
+  embeddingMetaTable,
   gcalEventMigration,
   gcalEventUrlMigration,
   orderMigration,
@@ -79,7 +80,7 @@ export function embeddingsTargetFor(dbUrl: string): string {
     return ":memory:";
   }
   const path = dbUrl.startsWith("file:") ? dbUrl.slice("file:".length) : dbUrl;
-  if (path.endsWith("data.db")) {
+  if (path.endsWith("/data.db") || path === "data.db") {
     return path.slice(0, -"data.db".length) + "embeddings.db";
   }
   return path.replace(/\.db$/, "") + ".embeddings.db";
@@ -155,6 +156,17 @@ export async function getDb(): Promise<Client> {
     return cachedClient;
   }
 
+  // URL changed (e.g. `task db use`): close the previous connection instead
+  // of leaking it. Anything still holding the old client fails fast on a
+  // closed connection rather than silently writing to the wrong database.
+  if (cachedClient) {
+    try {
+      cachedClient.close();
+    } catch {
+      // Closing a broken connection must not block opening the new one
+    }
+  }
+
   const client = createClient({ url: dbUrl });
 
   // Assert: Client must be created successfully.
@@ -173,8 +185,15 @@ export async function getDb(): Promise<Client> {
   return client;
 }
 
-/** Reset the cached client (useful for tests) */
+/** Reset the cached client, closing any open connection (useful for tests) */
 export function resetDbClient(): void {
+  if (cachedClient) {
+    try {
+      cachedClient.close();
+    } catch {
+      // Already closed or broken - nothing to release
+    }
+  }
   cachedClient = null;
   cachedDbUrl = null;
 }
@@ -243,6 +262,7 @@ async function migrateLegacyEmbeddingColumns(db: Client): Promise<void> {
 export async function migrateEmbeddingStorageOn(db: Client): Promise<void> {
   await db.execute(taskEmbeddingsTable);
   await db.execute(commentEmbeddingsTable);
+  await db.execute(embeddingMetaTable);
 
   try {
     await db.execute(taskEmbeddingsIndex);
@@ -336,6 +356,10 @@ async function migrateOrderOn(db: Client): Promise<void> {
       "SELECT DISTINCT parent_id FROM tasks",
     );
 
+    // Collect all updates and apply them in ONE transaction: the "all zeros"
+    // re-run guard above means a crash mid-assignment would otherwise leave
+    // some tasks at order=0 forever.
+    const updates: { sql: string; args: (number | bigint)[] }[] = [];
     for (const row of scopes.rows) {
       const parentId = row.parent_id as number | null;
 
@@ -355,12 +379,14 @@ async function migrateOrderOn(db: Client): Promise<void> {
 
       // Assign sequential order values
       for (let i = 0; i < tasks.rows.length; i++) {
-        await db.execute({
+        updates.push({
           sql: "UPDATE tasks SET `order` = ? WHERE id = ?",
-          args: [i, tasks.rows[i].id],
+          args: [i, tasks.rows[i].id as number],
         });
       }
     }
+
+    await db.batch(updates, "write");
 
     logger.info("Order values initialized for all tasks", "db");
   }
@@ -587,18 +613,14 @@ export async function runAllMigrations(db: Client): Promise<void> {
  * Otherwise, iterates all databases in ~/.task-cli/databases/.
  */
 export async function migrateAllDatabases(): Promise<void> {
-  // If using custom database URL (tests or custom setup), migrate just that one
+  // If using custom database URL (tests or custom setup), migrate just that
+  // one — on the shared getDb() client. A separate client would migrate a
+  // distinct database for ":memory:" URLs and leave the real one unmigrated.
   const testDbUrl = Deno.env.get("TASK_CLI_DB_URL");
   if (testDbUrl) {
-    const client = createClient({ url: testDbUrl });
-    try {
-      await client.execute("PRAGMA foreign_keys = ON;");
-      await attachEmbeddingsDb(client, testDbUrl);
-      await client.executeMultiple(schema);
-      await runAllMigrations(client);
-    } finally {
-      client.close();
-    }
+    const db = await getDb();
+    await db.executeMultiple(schema);
+    await runAllMigrations(db);
     return;
   }
 

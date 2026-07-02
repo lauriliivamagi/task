@@ -116,6 +116,13 @@ export const MAX_GCAL_BATCH_SYNC = 50;
 export const GCAL_AUTH_TIMEOUT_MS = 300_000;
 
 /**
+ * Timeout for a single embedding provider HTTP request in milliseconds.
+ * Bounds the wait when a provider accepts the connection but never responds;
+ * without it a hung provider stalls semantic search and backfill forever.
+ */
+export const EMBEDDING_REQUEST_TIMEOUT_MS = 30_000;
+
+/**
  * Maximum event duration in hours for Google Calendar events.
  */
 export const MAX_GCAL_DURATION_HOURS = 24;

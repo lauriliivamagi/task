@@ -59,10 +59,25 @@ commentsRoute.delete("/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const db = await getDb();
 
-  await db.execute({
+  const result = await db.execute({
     sql: "DELETE FROM comments WHERE id = ?",
     args: [id],
   });
+
+  if (result.rowsAffected === 0) {
+    return c.json({ error: `Comment #${id} not found` }, 404);
+  }
+
+  // The emb database is attached, not FK-linked, so cascades can't clean it.
+  // Best-effort: a missing embeddings table must not fail the delete.
+  try {
+    await db.execute({
+      sql: "DELETE FROM emb.comment_embeddings WHERE comment_id = ?",
+      args: [id],
+    });
+  } catch {
+    // Embedding storage unavailable — orphan is rebuilt away on backfill.
+  }
 
   return c.json({ deleted: true });
 });

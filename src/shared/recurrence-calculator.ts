@@ -286,11 +286,13 @@ function formatWithBaseTime(date: Date, baseDate: Date): string {
   );
   const baseUtc = baseInstant.toZonedDateTimeISO("UTC");
 
-  // rrule returns dates using local getters for the date portion
+  // rrule works in "UTC as fake-local" time: the wall-clock date of each
+  // occurrence is stored in the Date's UTC fields, so it must be read back
+  // with UTC getters. Local getters shift the date in any non-UTC timezone.
   const resultDate = Temporal.PlainDate.from({
-    year: date.getFullYear(),
-    month: date.getMonth() + 1,
-    day: date.getDate(),
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate(),
   });
 
   const combined = resultDate.toPlainDateTime({

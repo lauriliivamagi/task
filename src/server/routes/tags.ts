@@ -69,10 +69,14 @@ tagsRoute.delete("/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const db = await getDb();
 
-  await db.execute({
+  const result = await db.execute({
     sql: "DELETE FROM tags WHERE id = ?",
     args: [id],
   });
+
+  if (result.rowsAffected === 0) {
+    return c.json({ error: `Tag #${id} not found` }, 404);
+  }
 
   return c.json({ deleted: true });
 });

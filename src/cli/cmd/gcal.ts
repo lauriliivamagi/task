@@ -7,13 +7,9 @@
 import type { Argv } from "yargs";
 import { isAuthenticated, logout, startAuthFlow } from "../../gcal/auth.ts";
 import { createGcalClient } from "../../gcal/client.ts";
-import {
-  getUnsyncedTasksWithDueDates,
-  syncTasksToCalendar,
-  syncTaskToCalendar,
-} from "../../gcal/sync.ts";
 import { parseDueDate } from "../../shared/date-parser.ts";
 import { getConfig, setGcalCalendarId } from "../../shared/config.ts";
+import { runWithClient } from "../bootstrap.ts";
 
 // ========== gcal auth ==========
 const authCommand = {
@@ -232,9 +228,11 @@ const syncCommand = {
         describe: "Attach to existing server URL",
       }),
   handler: async (args: SyncArgs) => {
-    try {
-      const authenticated = await isAuthenticated();
-      if (!authenticated) {
+    // Route through the API client like every other CLI command, so --attach
+    // actually syncs against the attached server instead of the local DB.
+    await runWithClient({ attach: args.attach }, async (client) => {
+      const status = await client.getGcalStatus();
+      if (!status.authenticated) {
         console.error("Not authenticated. Run 'task gcal auth' first.");
         Deno.exit(1);
       }
@@ -249,13 +247,12 @@ const syncCommand = {
         }
       }
 
-      // Get default calendar from config if not specified
-      const config = await getConfig();
-      const calendarId = args.calendar ?? config.gcal?.calendar_id;
+      // The server resolves its own default calendar when not specified
+      const calendarId = args.calendar;
 
       if (args.all) {
         // Sync all tasks with due dates
-        const tasks = await getUnsyncedTasksWithDueDates();
+        const { tasks } = await client.getUnsyncedTasks();
 
         if (tasks.length === 0) {
           console.log("No unsynced tasks with due dates found.");
@@ -264,7 +261,7 @@ const syncCommand = {
 
         console.log(`Found ${tasks.length} tasks to sync:\n`);
 
-        const results = await syncTasksToCalendar(
+        const { results } = await client.batchSyncToCalendar(
           tasks.map((t) => t.id),
           {
             durationHours: args.duration,
@@ -297,21 +294,20 @@ const syncCommand = {
         );
       } else if (args.taskId) {
         // Sync single task
-        const result = await syncTaskToCalendar({
-          taskId: args.taskId,
-          durationHours: args.duration,
-          calendarId,
-          dueDate,
-        });
+        try {
+          const result = await client.syncToCalendar(args.taskId, {
+            durationHours: args.duration,
+            calendarId,
+            dueDate,
+          });
 
-        if (result.success) {
           const action = result.action === "created" ? "Created" : "Updated";
           console.log(`${action} calendar event for task #${args.taskId}`);
           if (result.eventUrl) {
             console.log(`Event URL: ${result.eventUrl}`);
           }
-        } else {
-          console.error(`Failed to sync: ${result.error}`);
+        } catch (error) {
+          console.error(`Failed to sync: ${(error as Error).message}`);
           Deno.exit(1);
         }
       } else {
@@ -327,10 +323,7 @@ const syncCommand = {
         console.log("  --datetime <datetime>     Override due datetime");
         Deno.exit(1);
       }
-    } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
-      Deno.exit(1);
-    }
+    });
   },
 };
 
