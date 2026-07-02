@@ -1,5 +1,5 @@
 {
-  "version": "1.11.0",
+  "version": "1.11.1",
   "publish": false,
   "lint": {
     "rules": {
@@ -44,7 +44,7 @@
     "@std/fmt": "jsr:@std/fmt@^1.0.8",
     "chrono-node": "npm:chrono-node@^2.7.0",
     "rrule": "npm:rrule@^2.8.1",
-    "hono": "npm:hono@^4.12.23",
+    "hono": "npm:hono@^4.12.25",
     "@hono/zod-openapi": "npm:@hono/zod-openapi@^1.1.5",
     "@hono/swagger-ui": "npm:@hono/swagger-ui@^0.5.0",
     "@hono/zod-validator": "npm:@hono/zod-validator@^0.7.5",
