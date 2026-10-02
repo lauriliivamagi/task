@@ -350,3 +350,44 @@ Deno.test("update command clears recurrence", async () => {
   const updatedTask = JSON.parse(updateResult.stdout);
   assertEquals(updatedTask.recurrence, null);
 });
+
+async function denoDir(): Promise<string> {
+  const { stdout } = await new Deno.Command("deno", {
+    args: ["info", "--json"],
+    stdout: "piped",
+    stderr: "null",
+  }).output();
+  return JSON.parse(new TextDecoder().decode(stdout)).denoDir;
+}
+
+Deno.test("first run on a fresh HOME migrates the new default database", async () => {
+  // No TASK_CLI_DB_URL: exercise the real ~/.task-cli bootstrap path, where
+  // the default database is created after the all-databases migration pass.
+  const home = await Deno.makeTempDir({ prefix: "task-cli-fresh-home-" });
+  try {
+    // Deno.Command merges `env` into the parent environment, so clearEnv is
+    // required to actually drop the TASK_CLI_DB_URL that `deno task test` sets.
+    // Keep the existing module cache so the child doesn't re-download deps.
+    const env: Record<string, string> = {
+      ...Deno.env.toObject(),
+      DENO_DIR: await denoDir(),
+      HOME: home,
+      TASK_CLI_LOG_DISABLED: "1",
+      TASK_CLI_SYNC_DISABLED: "1",
+    };
+    delete env.TASK_CLI_DB_URL;
+
+    const { code, stdout, stderr } = await new Deno.Command("deno", {
+      args: ["run", "-A", CLI_PATH, "list", "--json"],
+      stdout: "piped",
+      stderr: "piped",
+      env,
+      clearEnv: true,
+    }).output();
+
+    assertEquals(code, 0, new TextDecoder().decode(stderr));
+    assertEquals(JSON.parse(new TextDecoder().decode(stdout)), []);
+  } finally {
+    await Deno.remove(home, { recursive: true });
+  }
+});

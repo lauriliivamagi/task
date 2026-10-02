@@ -12,7 +12,7 @@ import {
   AssertionError,
 } from "@std/assert";
 import { app } from "./server/server.ts";
-import { getDb, initDb, resetDbClient, runAllMigrations } from "./db/client.ts";
+import { getDb, initDb, resetDbClient } from "./db/client.ts";
 import type {
   BatchCreateResponse,
   ParseTasksResponse,
@@ -88,7 +88,6 @@ Deno.test({
     try {
       // Initialize schema and run all migrations (creates fresh in-memory DB)
       await initDb();
-      await runAllMigrations(await getDb());
 
       await t.step("Health check returns ok", async () => {
         const data = await apiOk<{ status: string }>("GET", "/health");

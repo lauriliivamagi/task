@@ -251,6 +251,12 @@ task db current          # Show active database
 `deno task test` sets `TASK_CLI_DB_URL=:memory:` automatically. Tests never
 touch `~/.task-cli/databases/`. CLI tests use `/tmp/task-cli-test-*.db`.
 
+To exercise the real `~/.task-cli` bootstrap from a subprocess, point `HOME` at
+a temp dir and pass `clearEnv: true` to `Deno.Command` — its `env` option merges
+into the parent environment, so deleting `TASK_CLI_DB_URL` from the object alone
+still leaks `:memory:` into the child (see the fresh-HOME test in
+`tests/cli_test.ts`).
+
 ### Filesystem Abstraction
 
 Use `src/shared/fs-abstraction.ts` for testable filesystem code:

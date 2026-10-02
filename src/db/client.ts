@@ -198,9 +198,18 @@ export function resetDbClient(): void {
   cachedDbUrl = null;
 }
 
+/**
+ * Initialize the active database: base schema plus all migrations.
+ *
+ * Migrations run here too, not only in migrateAllDatabases(), because getDb()
+ * may create the active database itself (first run on a fresh machine, or a
+ * deleted active db) after the all-databases pass has already finished. The
+ * base schema alone lacks migration-added columns such as `order`.
+ */
 export async function initDb(): Promise<Client> {
   const db = await getDb();
   await db.executeMultiple(schema);
+  await runAllMigrations(db);
   return db;
 }
 
