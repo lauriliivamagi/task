@@ -310,7 +310,7 @@ function handleEditingInput(
 }
 
 /**
- * Handle input in multiline editing modes (Escape cancels, Enter without Shift submits)
+ * Handle input in multiline editing modes (Escape cancels, plain Enter submits)
  */
 function handleMultilineEditingInput(
   key: KeyInfo,
@@ -324,13 +324,13 @@ function handleMultilineEditingInput(
     return;
   }
 
-  if (key.return && !key.shift) {
+  if (key.return && !key.shift && !key.meta) {
     logDispatch("SUBMIT", mode, keyStr);
     actorRef.send({ type: "SUBMIT" });
     return;
   }
 
-  // Multiline input handles shift+enter for newlines
+  // MultilineInput turns Shift+Enter and Alt+Enter into newlines
 }
 
 /**

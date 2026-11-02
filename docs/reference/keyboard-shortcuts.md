@@ -99,6 +99,17 @@ Vim-like command prompt, opened with `:` from list or detail view.
 | `Escape` | Cancel input |
 | `Ctrl+u` | Clear input  |
 
+Description and comment inputs are multi-line:
+
+| Key           | Action                                    |
+| ------------- | ----------------------------------------- |
+| `Alt+Enter`   | New line (any terminal)                   |
+| `Shift+Enter` | New line (kitty, WezTerm, Ghostty, herdr) |
+| `Ctrl+a`      | Move to start                             |
+| `Ctrl+e`      | Move to end                               |
+
+Other terminals send `Shift+Enter` as a plain `Enter`, which submits.
+
 ## Customization
 
 Override shortcuts in `~/.task-cli/config.json`:

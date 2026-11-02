@@ -816,6 +816,64 @@ Deno.test({
 });
 
 Deno.test({
+  name: "TUI E2E - Alt+Enter in description edit inserts a newline",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  fn: async () => {
+    const { lastFrame, stdin, unmount, client } = renderApp();
+
+    await waitForText(lastFrame, "Buy groceries", { timeout: 3000 });
+    stdin.write(KEYS.TAB);
+    await delay(100);
+    stdin.write("d");
+    await delay(100);
+
+    // Description is pre-filled with "Milk, eggs, bread"; cursor at the end
+    stdin.write(KEYS.ALT_ENTER);
+    await delay(50);
+    await typeText(stdin, "butter", 20);
+    await delay(50);
+    stdin.write(KEYS.ENTER);
+    await delay(200);
+
+    const task = await client.getTask(1);
+    assertEquals(task.description, "Milk, eggs, bread\nbutter");
+
+    unmount();
+    cleanup();
+  },
+});
+
+Deno.test({
+  name:
+    "TUI E2E - kitty-protocol Shift+Enter in description edit inserts a newline",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  fn: async () => {
+    const { lastFrame, stdin, unmount, client } = renderApp();
+
+    await waitForText(lastFrame, "Buy groceries", { timeout: 3000 });
+    stdin.write(KEYS.TAB);
+    await delay(100);
+    stdin.write("d");
+    await delay(100);
+
+    stdin.write(KEYS.KITTY_SHIFT_ENTER);
+    await delay(50);
+    await typeText(stdin, "butter", 20);
+    await delay(50);
+    stdin.write(KEYS.ENTER);
+    await delay(200);
+
+    const task = await client.getTask(1);
+    assertEquals(task.description, "Milk, eggs, bread\nbutter");
+
+    unmount();
+    cleanup();
+  },
+});
+
+Deno.test({
   name: "TUI E2E - 's' in detail opens status selection",
   sanitizeResources: false,
   sanitizeOps: false,

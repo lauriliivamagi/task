@@ -551,7 +551,7 @@ export function TaskDetail(
         >
           <Text>
             Add Comment:{" "}
-            <Text dimColor>(Esc to cancel, Shift+Enter for new line)</Text>
+            <Text dimColor>(Esc to cancel, Shift/Alt+Enter for new line)</Text>
           </Text>
           <MultilineInput
             value={commentText}

@@ -18,6 +18,7 @@ import { isAutoSyncEnabled, syncOnStartup } from "../shared/sync.ts";
 import { getConfig } from "../shared/config.ts";
 import { initKeybindings } from "../shared/keybindings.ts";
 import { exitTui, registerInkInstance } from "./exit.ts";
+import { kittyKeyboardMode } from "./keyboard-protocol.ts";
 import { APP_VERSION } from "../shared/version.ts";
 import {
   AttachmentPicker,
@@ -648,8 +649,15 @@ export async function startTui(serverUrl: string): Promise<void> {
     await exitTui(0);
   });
 
+  // Kitty keyboard protocol lets Shift+Enter insert newlines in multiline
+  // inputs; Ink disables it again on unmount
   const { unmount } = render(
     <App client={client} lastSelectedTaskId={lastSelectedTaskId} />,
+    {
+      kittyKeyboard: {
+        mode: kittyKeyboardMode(Deno.env.get("TERM_PROGRAM")),
+      },
+    },
   );
   registerInkInstance(unmount);
 }

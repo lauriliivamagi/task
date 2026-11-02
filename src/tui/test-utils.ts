@@ -30,10 +30,18 @@ export const KEYS = {
   DELETE: "\x1b[3~",
   SPACE: " ",
 
+  // Modified Enter. Legacy terminals send Shift+Enter as a plain "\r";
+  // only the kitty keyboard protocol tells it apart from Enter.
+  ALT_ENTER: "\x1b\r",
+  KITTY_SHIFT_ENTER: "\x1b[13;2u",
+
   // Ctrl combinations
+  CTRL_A: "\x01",
   CTRL_C: "\x03",
   CTRL_D: "\x04",
+  CTRL_E: "\x05",
   CTRL_U: "\x15", // Clear line
+  KITTY_CTRL_A: "\x1b[97;5u",
 
   // Function keys
   F1: "\x1bOP",

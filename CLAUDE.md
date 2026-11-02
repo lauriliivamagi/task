@@ -327,7 +327,8 @@ Deno.test({
 
 **Key utilities:**
 
-- `KEYS` — ANSI escape sequences (UP, DOWN, ENTER, ESCAPE, TAB)
+- `KEYS` — ANSI escape sequences (UP, DOWN, ENTER, ESCAPE, TAB), plus
+  `ALT_ENTER` and kitty-protocol forms like `KITTY_SHIFT_ENTER`
 - `waitForText(getFrame, text)` — Wait for text to appear
 - `stripAnsi(str)` — Remove ANSI codes for comparison
 - `MockTaskClient` — In-memory API mock
@@ -601,6 +602,14 @@ operations (API calls, file ops).
 | `Shift+V` | Paste image attachment  |
 | `Shift+G` | Sync to Google Calendar |
 | `Tab`     | Switch to list          |
+
+**Multiline inputs** (description, comment): `Enter` submits; `Alt+Enter`
+inserts a new line in any terminal. `Shift+Enter` does too, but only where the
+terminal reports it distinctly: the TUI enables the kitty keyboard protocol
+(`kittyKeyboardMode` in `src/tui/keyboard-protocol.ts`): always under herdr
+(`TERM_PROGRAM=herdr`, which otherwise collapses modified Enter to `\r`), and
+via Ink's auto-detection in kitty, WezTerm and Ghostty. Elsewhere Shift+Enter
+arrives as plain `\r` and submits.
 
 **Customization** via `~/.task-cli/config.json`:
 

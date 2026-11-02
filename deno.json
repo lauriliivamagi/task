@@ -1,5 +1,5 @@
 {
-  "version": "1.11.5",
+  "version": "1.11.6",
   "publish": false,
   "lint": {
     "rules": {
@@ -50,7 +50,7 @@
     "@hono/zod-validator": "npm:@hono/zod-validator@^0.7.5",
     "zod": "npm:zod@^4.1.13",
     "yargs": "npm:yargs@^17.7.0",
-    "ink": "npm:ink@^6.5.1",
+    "ink": "npm:ink@^6.8.0",
     "ink-select-input": "npm:ink-select-input@^6.2.0",
     "ink-text-input": "npm:ink-text-input@^6.0.0",
     "ink-spinner": "npm:ink-spinner@^5.0.0",
